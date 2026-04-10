@@ -14,9 +14,9 @@
 6. [Artifacts](#6-artifacts)  
 7. [Signatures and Evidence](#7-signatures-and-evidence)  
 8. [Evidence Bundle References](#8-evidence-bundle-references)  
-9. [Digest and Canonicalization](#9-digest-and-canonicalization)  
+9. [Digest Algorithm and Canonicalization](#9-digest-algorithm-and-canonicalization)  
 10. [Validation Model](#10-validation-model)  
-11. [Reuse Across Collections](#11-reuse-across-collections)  
+11. [Reuse Rules](#11-reuse-rules)  
 12. [Profiles](#12-profiles)  
 13. [Error Conditions](#13-error-conditions)  
 14. [Extensibility](#14-extensibility)  
@@ -31,7 +31,7 @@ It defines:
 
 - which artifacts belong to a release  
 - the exact byte representation of those artifacts  
-- optional cryptographic verification mechanisms  
+- optional cryptographic verification references  
 
 The collection is the **publisher’s release statement**.
 
@@ -45,10 +45,10 @@ The TEA collection provides:
 - artifact binding via cryptographic digests  
 - a stable unit for validation and distribution  
 
-The collection itself does **not establish trust**.  
+The collection itself does **not establish trust**.
+
 Trust is established through:
 
-- signatures  
 - evidence bundles  
 - validation policies  
 
@@ -68,13 +68,13 @@ The TEA trust architecture introduces additional requirements on top of this bas
 
 # 4. Core Concepts
 
-### 4.1 Collection
+## 4.1 TEA Collection
 
-A **collection** is a structured object describing a release.
+A structured object describing a release.
 
 ---
 
-### 4.2 Artifact
+## 4.2 TEA Artifact
 
 A **TEA artifact** is any file referenced by the collection.
 
@@ -87,26 +87,24 @@ Examples:
 
 ---
 
-### 4.3 Evidence Bundle
+## 4.3 Evidence Bundle
 
-An **evidence bundle** contains:
+An **evidence bundle** is the primary unit of trust and contains:
 
 - signature  
 - certificate  
 - timestamp(s)  
 - transparency evidence  
 
-It is the **primary unit of trust** in the TEA trust architecture.
-
 ---
 
-### 4.4 Detached Signature (Legacy)
+## 4.4 Detached Signature (Legacy)
 
-A **detached signature** is a standalone signature file.
+A standalone signature file.
 
-It is supported for compatibility but:
+Supported for compatibility, but:
 
-> In TEA trust architecture, evidence bundles SHOULD be used instead.
+> In the TEA trust architecture, evidence bundles SHOULD be used instead.
 
 ---
 
@@ -141,20 +139,23 @@ Each artifact MUST include a digest.
 }
 ```
 
-### Rules
+---
 
-- Digest MUST match exact artifact bytes  
-- Artifact content MUST NOT be modified without updating digest  
+## 6.1 Rules
+
+- The digest MUST be computed using SHA-256  
+- The digest MUST match the exact artifact bytes  
+- Artifact content MUST NOT change without updating the digest  
 
 ---
 
 # 7. Signatures and Evidence
 
-TEA supports multiple approaches:
+TEA supports two models:
 
 ---
 
-## 7.1 Detached Signatures (Legacy Support)
+## 7.1 Detached Signatures (Legacy)
 
 ```json
 {
@@ -167,11 +168,11 @@ Supported formats may include:
 
 - S/MIME / CMS  
 - JWS  
-- GPG (not recommended)  
+- GPG (NOT RECOMMENDED)  
 
 ---
 
-## 7.2 Evidence Bundle (Preferred)
+## 7.2 Evidence Bundles (Preferred)
 
 Evidence bundles encapsulate all verification material.
 
@@ -193,8 +194,8 @@ Collections MAY reference external evidence bundles.
 
 ```json
 {
-  "objectType": "tea-collection",
-  "uri": "https://example.com/evidence/collection.bundle.json",
+  "objectType": "tea-artifact",
+  "uri": "https://example.com/evidence/artifact.bundle.json",
   "digest": {
     "algorithm": "sha-256",
     "value": "BASE64URL..."
@@ -204,54 +205,87 @@ Collections MAY reference external evidence bundles.
 
 ---
 
-## 8.2 Rules
+## 8.2 Normative Requirements
 
-- `uri` MUST resolve to the evidence bundle  
-- `digest` MUST match the exact bundle content  
-- Digest MUST be computed over canonical representation (see Section 9)  
+- The `uri` MUST resolve to the evidence bundle  
+- The `digest` MUST match the exact bundle content  
+- The digest MUST be computed using SHA-256  
+- The digest MUST be computed over a canonical representation  
 
 ---
 
-## 8.3 Binding
+## 8.3 Binding Requirements
 
 The referenced bundle MUST:
 
-- refer to this collection  
-- contain a matching object digest  
+- refer to the same artifact  
+- contain an object digest matching the artifact digest  
 
 Mismatch MUST result in validation failure.
 
 ---
 
-# 9. Digest and Canonicalization
+## 8.4 Scope Restriction
 
-JSON representations are not stable across formatting.
+Evidence bundle reuse is **restricted to artifacts only**.
 
-Therefore:
+Evidence bundles MUST NOT be reused for:
 
-### Rule
-
-All JSON digests MUST use:
-
-> **RFC 8785 — JSON Canonicalization Scheme (JCS)**
+- TEA collections  
+- discovery documents  
 
 ---
 
-### Process
+# 9. Digest Algorithm and Canonicalization
 
-1. Canonicalize JSON  
-2. Compute digest  
-3. Encode using base64url  
+## 9.1 Digest Algorithm
+
+TEA defines a single digest algorithm:
+
+- `sha-256`
 
 ---
 
-### Rationale
+## 9.2 Normative Requirements
 
-Ensures:
+- All digests MUST use SHA-256  
+- No other digest algorithm is permitted  
+- Implementations MUST support SHA-256  
 
-- consistent hashing  
-- interoperability  
-- stable validation  
+---
+
+## 9.3 Prohibited Algorithms
+
+The following MUST NOT be used:
+
+- MD5  
+- SHA-1  
+- SHA-512  
+- any other algorithm not defined by this specification  
+
+---
+
+## 9.4 Canonicalization
+
+JSON-based objects MUST be canonicalized using:
+
+> RFC 8785 — JSON Canonicalization Scheme (JCS)
+
+---
+
+## 9.5 Digest Computation
+
+For JSON objects:
+
+```
+digest = SHA-256(JCS(object))
+```
+
+---
+
+## 9.6 Encoding
+
+Digest values MUST be encoded using base64url.
 
 ---
 
@@ -261,77 +295,76 @@ Validation MUST follow:
 
 ---
 
-### 10.1 Collection Integrity
+## 10.1 Collection Integrity
 
 - verify collection structure  
 - verify artifact digests  
 
 ---
 
-### 10.2 Signature / Evidence
+## 10.2 Evidence Validation
 
-If present:
+If evidence bundles are present:
 
-- verify detached signatures  
-OR  
-- validate evidence bundle  
-
----
-
-### 10.3 Evidence Bundle Validation
-
-When using evidence bundles:
-
-1. verify object digest  
-2. verify signature  
-3. verify certificate  
-4. verify timestamp  
-5. verify timestamp binding  
-6. verify transparency evidence  
+1. verify artifact digest  
+2. verify bundle digest  
+3. validate evidence bundle:
+   - signature  
+   - certificate  
+   - timestamp  
+   - transparency  
 
 ---
 
-### Rule
+## 10.3 Rule
 
 > Validation MUST fail on any binding mismatch.
 
 ---
 
-# 11. Reuse Across Collections
+# 11. Reuse Rules
 
-### 11.1 Artifact Reuse
+## 11.1 Artifact Reuse
 
 An artifact MAY appear in multiple collections.
 
 ---
 
-### 11.2 Evidence Bundle Reuse
+## 11.2 Evidence Bundle Reuse
 
-An evidence bundle MAY be reused across collections if:
+An evidence bundle MAY be reused only when:
 
-- the artifact digest matches  
-- the bundle refers to the same object  
+- it refers to a TEA artifact  
+- the artifact digest is identical  
 
 ---
 
-### 11.3 Implication
+## 11.3 Prohibited Reuse
 
-Artifacts and evidence bundles become:
+Evidence bundles MUST NOT be reused for:
 
-> reusable, immutable building blocks  
+- TEA collections  
+- discovery documents  
+
+---
+
+## 11.4 Principle
+
+Artifacts are immutable objects.  
+Collections are contextual release statements.
 
 ---
 
 # 12. Profiles
 
-### 12.1 Minimal (Base TEA)
+## 12.1 Base TEA
 
 - artifacts with digests  
 - optional detached signatures  
 
 ---
 
-### 12.2 TEA Trust Architecture
+## 12.2 TEA Trust Architecture
 
 - evidence bundles REQUIRED  
 - timestamps REQUIRED  
@@ -339,7 +372,7 @@ Artifacts and evidence bundles become:
 
 ---
 
-### 12.3 High Assurance
+## 12.3 High Assurance
 
 - multiple timestamps  
 - multiple transparency systems  
@@ -362,8 +395,6 @@ Validation MUST fail if:
 
 # 14. Extensibility
 
-Rules:
-
 - unknown fields MUST be ignored  
 - additional evidence types MAY be added  
 - future formats (CBOR, COSE) MAY be supported  
@@ -374,17 +405,11 @@ Rules:
 
 The TEA collection defines:
 
-- *what belongs to a release*  
+- what belongs to a release  
 
 The evidence bundle defines:
 
-- *why it can be trusted*  
-
-Together, they provide:
-
-- deterministic composition  
-- verifiable integrity  
-- long-term validation  
+- why it can be trusted  
 
 ---
 
