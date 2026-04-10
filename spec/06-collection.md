@@ -1,623 +1,394 @@
-# 📘 TEA Signature Model: Collections and Artefacts
+# 📘 TEA Collection Specification
+**Version:** 1.0  
+**Status:** Draft (Normative, Implementation-Ready)
 
 ---
 
-## 1. Introduction
+# Table of Contents
 
-This document defines the semantics, purpose, and validation rules for signatures used in the Transparency Exchange API (TEA).
-
-TEA distinguishes between two fundamentally different types of signatures:
-
-- collection signatures, which are statements by the publisher about a release  
-- artefact signatures, which are statements about individual artefact authenticity  
-
-These signatures serve different roles and MUST NOT be conflated.
-
-This document defines:
-
-- what each signature type means  
-- how they interact  
-- how consumers MUST validate them  
-- how to interpret trust conclusions  
-- how signatures relate to certificates, timestamps, DNS publication, and transparency evidence  
+1. [Introduction](#1-introduction)  
+2. [Purpose](#2-purpose)  
+3. [Scope](#3-scope)  
+4. [Core Concepts](#4-core-concepts)  
+5. [Collection Structure](#5-collection-structure)  
+6. [Artifacts](#6-artifacts)  
+7. [Signatures and Evidence](#7-signatures-and-evidence)  
+8. [Evidence Bundle References](#8-evidence-bundle-references)  
+9. [Digest and Canonicalization](#9-digest-and-canonicalization)  
+10. [Validation Model](#10-validation-model)  
+11. [Reuse Across Collections](#11-reuse-across-collections)  
+12. [Profiles](#12-profiles)  
+13. [Error Conditions](#13-error-conditions)  
+14. [Extensibility](#14-extensibility)  
 
 ---
 
-## 2. Core Principles
+# 1. Introduction
 
-### 2.1 Separation of Concerns
+A **TEA collection** is the authoritative description of a release.
 
-TEA separates:
+It defines:
 
-- integrity of artefacts  
-- publisher assertions about releases  
-- binding between artefacts and releases  
+- which artifacts belong to a release  
+- the exact byte representation of those artifacts  
+- optional cryptographic verification mechanisms  
 
-These are implemented as:
-
-- artefact signature → authenticity of artefact  
-- collection signature → authenticity of publisher statement about the release  
-- checksums in the collection → binding of artefact bytes to that signed statement  
+The collection is the **publisher’s release statement**.
 
 ---
 
-### 2.2 Signed Collection as Integrity Map
+# 2. Purpose
 
-A TEA collection is not merely metadata.
+The TEA collection provides:
 
-A signed collection is a publisher-authenticated integrity map of artefacts because it contains:
+- deterministic release definition  
+- artifact binding via cryptographic digests  
+- a stable unit for validation and distribution  
 
-- references to artefacts  
-- checksums of artefacts  
-- release context  
-- versioning metadata  
+The collection itself does **not establish trust**.  
+Trust is established through:
 
-and the entire structure is signed.
-
----
-
-### 2.3 Many-to-Many Relationships
-
-TEA explicitly supports:
-
-- one artefact appearing in multiple collections  
-- multiple collections for one software version  
-- collection updates that do not change artefact bytes  
-
-Consumers MUST NOT assume uniqueness of either artefacts or collections.
+- signatures  
+- evidence bundles  
+- validation policies  
 
 ---
 
-### 2.4 Dual-Level Trust Model
+# 3. Scope
 
-TEA trust for release data is intentionally dual-layered:
+A collection:
 
-- artefact-level signatures establish artefact authenticity  
-- collection-level signatures establish release inclusion and publisher approval  
+- MAY reference multiple artifacts  
+- MAY be versioned  
+- MAY exist without signatures (base TEA)  
 
-Both layers are important, but they answer different questions.
-
----
-
-## 3. Collection Signatures
-
-### 3.1 Meaning
-
-A collection signature asserts:
-
-> “This collection version, including its artefact checksums and metadata, is approved by the publisher.”
-
-It guarantees:
-
-- authenticity of the collection  
-- integrity of all checksums within it  
-- integrity of release metadata  
-- authenticity of the publisher statement that these artefacts belong to this collection version  
+The TEA trust architecture introduces additional requirements on top of this base model.
 
 ---
 
-### 3.2 What a Collection Signature Does Not Guarantee
+# 4. Core Concepts
 
-A collection signature does not guarantee:
+### 4.1 Collection
 
-- that each artefact is intrinsically authentic on its own  
-- that each artefact is separately signed  
-- that this is the only collection for a release  
-- that no later collection version exists  
+A **collection** is a structured object describing a release.
 
 ---
 
-### 3.3 Binding via Checksums
+### 4.2 Artifact
 
-The collection includes checksums for artefacts.
+A **TEA artifact** is any file referenced by the collection.
 
-Because the collection is signed, those checksums are part of the signed publisher statement.
+Examples:
 
-This creates the binding:
-
-> “These exact bytes belong to this collection version.”
+- SBOM  
+- binary  
+- VEX  
+- documentation  
 
 ---
 
-### 3.4 Collection Versioning
+### 4.3 Evidence Bundle
 
-A collection version may change without changing artefact bytes.
+An **evidence bundle** contains:
 
-Examples include:
+- signature  
+- certificate  
+- timestamp(s)  
+- transparency evidence  
 
-- VEX updates  
-- metadata corrections  
-- descriptive changes  
-- additional references  
-- updated evidence  
+It is the **primary unit of trust** in the TEA trust architecture.
+
+---
+
+### 4.4 Detached Signature (Legacy)
+
+A **detached signature** is a standalone signature file.
+
+It is supported for compatibility but:
+
+> In TEA trust architecture, evidence bundles SHOULD be used instead.
+
+---
+
+# 5. Collection Structure
+
+Example:
+
+```json
+{
+  "collectionId": "release-2026.01",
+  "version": "1.0",
+  "artifacts": [ ... ],
+  "signatures": [ ... ],
+  "evidenceBundles": [ ... ]
+}
+```
+
+---
+
+# 6. Artifacts
+
+Each artifact MUST include a digest.
+
+```json
+{
+  "artifactId": "sbom",
+  "uri": "https://example.com/sbom.json",
+  "digest": {
+    "algorithm": "sha-256",
+    "value": "BASE64URL..."
+  }
+}
+```
+
+### Rules
+
+- Digest MUST match exact artifact bytes  
+- Artifact content MUST NOT be modified without updating digest  
+
+---
+
+# 7. Signatures and Evidence
+
+TEA supports multiple approaches:
+
+---
+
+## 7.1 Detached Signatures (Legacy Support)
+
+```json
+{
+  "type": "smime",
+  "uri": "https://example.com/signature.p7s"
+}
+```
+
+Supported formats may include:
+
+- S/MIME / CMS  
+- JWS  
+- GPG (not recommended)  
+
+---
+
+## 7.2 Evidence Bundle (Preferred)
+
+Evidence bundles encapsulate all verification material.
+
+They:
+
+- replace standalone signature handling  
+- enable offline validation  
+- support long-term verification  
+
+---
+
+# 8. Evidence Bundle References
+
+Collections MAY reference external evidence bundles.
+
+---
+
+## 8.1 Structure
+
+```json
+{
+  "objectType": "tea-collection",
+  "uri": "https://example.com/evidence/collection.bundle.json",
+  "digest": {
+    "algorithm": "sha-256",
+    "value": "BASE64URL..."
+  }
+}
+```
+
+---
+
+## 8.2 Rules
+
+- `uri` MUST resolve to the evidence bundle  
+- `digest` MUST match the exact bundle content  
+- Digest MUST be computed over canonical representation (see Section 9)  
+
+---
+
+## 8.3 Binding
+
+The referenced bundle MUST:
+
+- refer to this collection  
+- contain a matching object digest  
+
+Mismatch MUST result in validation failure.
+
+---
+
+# 9. Digest and Canonicalization
+
+JSON representations are not stable across formatting.
 
 Therefore:
 
-- collection version is not equivalent to software version  
-- a collection update does not necessarily imply a software update  
+### Rule
+
+All JSON digests MUST use:
+
+> **RFC 8785 — JSON Canonicalization Scheme (JCS)**
 
 ---
 
-### 3.5 Collection Signature as Release Approval
+### Process
 
-The collection signature is the publisher’s approval of release composition.
-
-In operational terms, this is the main release-level trust statement in TEA.
-
----
-
-## 4. Artefact Signatures
-
-### 4.1 Meaning
-
-An artefact signature asserts:
-
-> “This artefact was produced and signed by the holder of this key.”
-
-It provides:
-
-- authenticity of the artefact  
-- integrity of the artefact  
+1. Canonicalize JSON  
+2. Compute digest  
+3. Encode using base64url  
 
 ---
 
-### 4.2 Optional in Core TEA, Recommended for Assurance
+### Rationale
 
-Artefact signatures are:
+Ensures:
 
-- optional in core TEA  
-- recommended for stronger assurance  
-- required by stricter validation profiles or deployment policy  
-
-This means TEA can still bind an unsigned artefact to a release via signed collection checksums, but independent artefact authenticity is only established when an artefact signature is present and valid.
+- consistent hashing  
+- interoperability  
+- stable validation  
 
 ---
 
-### 4.3 Signature Forms
+# 10. Validation Model
 
-Artefact signatures may be:
-
-- detached  
-- inline  
-
-Example: CycloneDX JSON with embedded signature.
+Validation MUST follow:
 
 ---
 
-### 4.4 Independence from Collection
+### 10.1 Collection Integrity
 
-Artefact signatures are independent of collections.
-
-This means:
-
-- artefacts can be reused across releases  
-- artefacts remain verifiable outside TEA  
-- authenticity can be validated independently  
+- verify collection structure  
+- verify artifact digests  
 
 ---
 
-### 4.5 What an Artefact Signature Does Not Guarantee
-
-An artefact signature does not guarantee:
-
-- that the artefact belongs to a given TEA release  
-- that the artefact matches a specific collection version  
-- that the artefact was approved for release  
-
-Those guarantees come from the collection signature and checksum binding.
-
----
-
-## 5. Combined Trust Model
-
-### 5.1 Three Core Validation Elements
-
-TEA establishes trust using:
-
-1. collection signature  
-2. checksums inside the collection  
-3. artefact signature (when present)  
-
----
-
-### 5.2 Trust Statements
-
-With collection only:
-
-> “This exact file is part of this signed collection version.”
-
-With collection + artefact signature:
-
-> “This exact file is part of this signed collection version, and the artefact itself is authentic.”
-
----
-
-### 5.3 Full Trust Interpretation
-
-High-assurance interpretation:
-
-- artefact is authentic  
-- artefact matches collection checksum  
-- publisher approved inclusion  
-- time and publication evidence are valid  
-
----
-
-## 6. Signature Inputs and Canonicalization
-
-### 6.1 Deterministic Signing Requirement
-
-Signatures require consistent byte representation.
-
----
-
-### 6.2 JSON Canonicalization
-
-RFC 8785 (JCS) SHOULD be used when applicable.
-
-Signer MUST define:
-
-- raw bytes OR  
-- canonical JSON  
-
-Consumers MUST match.
-
----
-
-### 6.3 Raw Byte Signing
-
-Exact bytes MUST match during verification.
-
----
-
-### 6.4 Inline Signature Canonicalization
-
-Format-specific canonicalization rules MUST be followed.
-
----
-
-### 6.5 Detached Signature Handling
-
-Detached signatures MUST be validated against:
-
-- exact bytes OR  
-- defined canonical form  
-
----
-
-## 7. Signature Algorithms
-
-### 7.1 TEA-Native
-
-- Ed25519 REQUIRED  
-
----
-
-### 7.2 WebPKI
-
-- algorithms follow PKIX rules  
-
----
-
-### 7.3 Future Formats
-
-Signature semantics are independent of encoding/wrapper formats.
-
----
-
-## 8. Consumer Validation Rules
-
-### 8.1 Required Collection Validation
-
-Consumer MUST:
-
-1. validate collection signature  
-2. validate collection timestamp  
-3. validate transparency evidence (per trust model/profile)  
-4. extract checksums  
-5. compute artefact digests  
-6. compare digests  
-
----
-
-### 8.2 Artefact Signature Handling
+### 10.2 Signature / Evidence
 
 If present:
 
-- detect type (inline/detached)  
-- validate accordingly  
+- verify detached signatures  
+OR  
+- validate evidence bundle  
 
 ---
 
-### 8.3 Artefact Signature Policy
+### 10.3 Evidence Bundle Validation
 
-If required:
+When using evidence bundles:
 
-- missing → fail  
-- invalid → fail  
-
-If optional:
-
-- collection binding MAY suffice  
-
----
-
-### 8.4 TEA-Native Trust Anchor Validation
-
-Consumer MUST:
-
-- validate certificate profile  
-- compute SHA-256(public key)  
-- verify SAN fingerprint match  
-- verify certificate matches DNS CERT record  
-- validate DNSSEC when required  
+1. verify object digest  
+2. verify signature  
+3. verify certificate  
+4. verify timestamp  
+5. verify timestamp binding  
+6. verify transparency evidence  
 
 ---
 
-### 8.5 WebPKI Validation
+### Rule
 
-Consumer MUST:
-
-- validate PKIX chain  
-
-Consumer MUST NOT:
-
-- use DNS CERT as trust anchor  
-
-Consumer SHOULD:
-
-- validate CAA records  
+> Validation MUST fail on any binding mismatch.
 
 ---
 
-### 8.6 Failure Conditions
+# 11. Reuse Across Collections
+
+### 11.1 Artifact Reuse
+
+An artifact MAY appear in multiple collections.
+
+---
+
+### 11.2 Evidence Bundle Reuse
+
+An evidence bundle MAY be reused across collections if:
+
+- the artifact digest matches  
+- the bundle refers to the same object  
+
+---
+
+### 11.3 Implication
+
+Artifacts and evidence bundles become:
+
+> reusable, immutable building blocks  
+
+---
+
+# 12. Profiles
+
+### 12.1 Minimal (Base TEA)
+
+- artifacts with digests  
+- optional detached signatures  
+
+---
+
+### 12.2 TEA Trust Architecture
+
+- evidence bundles REQUIRED  
+- timestamps REQUIRED  
+- transparency REQUIRED  
+
+---
+
+### 12.3 High Assurance
+
+- multiple timestamps  
+- multiple transparency systems  
+- strict validation policies  
+
+---
+
+# 13. Error Conditions
 
 Validation MUST fail if:
 
-- collection signature invalid  
+- artifact digest mismatch  
+- bundle digest mismatch  
+- signature invalid  
 - timestamp invalid  
-- checksum mismatch  
-- required artefact signature invalid  
-- trust anchor validation fails  
+- transparency invalid  
+- binding inconsistency  
 
 ---
 
-## 9. Validation Profiles
+# 14. Extensibility
 
-### 9.1 Minimal Profile
+Rules:
 
-- collection signature  
-- timestamp  
-- checksum binding  
-
-⚠️ Not sufficient for full TEA-native validation unless transparency and DNS validation are also satisfied.
+- unknown fields MUST be ignored  
+- additional evidence types MAY be added  
+- future formats (CBOR, COSE) MAY be supported  
 
 ---
 
-### 9.2 Recommended Profile
+# Final Statement
 
-- collection signature  
-- timestamp  
-- checksum binding  
-- artefact signature (if present)  
-- transparency validation  
-- trust anchor validation  
+The TEA collection defines:
 
----
+- *what belongs to a release*  
 
-### 9.3 High-Assurance Profile
+The evidence bundle defines:
 
-- collection signature  
-- timestamp  
-- checksum binding  
-- artefact signature REQUIRED  
-- artefact timestamp  
-- transparency REQUIRED  
-- evidence retention  
+- *why it can be trusted*  
 
----
+Together, they provide:
 
-## 10. Signatures, Time, Transparency, and DNS
-
-### 10.1 Multi-Anchor Trust Context
-
-Trust derives from:
-
-- certificate  
-- timestamp  
-- DNS  
-- transparency  
-
----
-
-### 10.2 Timestamp Role
-
-Timestamps provide:
-
-- proof of existence in time  
-- protection against backdating  
+- deterministic composition  
+- verifiable integrity  
 - long-term validation  
 
 ---
 
-### 10.2.1 Timestamp Binding (CRITICAL)
+## Key Principle
 
-The timestamp MUST bind to the signature:
-
-```
-messageImprint = hash(signature)
-```
-
-And MUST satisfy:
-
-```
-timestamp ∈ [certificate.notBefore, certificate.notAfter]
-```
-
----
-
-### 10.3 Transparency Role
-
-Transparency provides:
-
-- auditability  
-- ordering  
-- tamper detection  
-
-Systems include:
-
-- Rekor  
-- Sigsum  
-- SCITT  
-
----
-
-### 10.3.1 Transparency Binding
-
-Transparency evidence MUST refer to the same:
-
-- signature  
-  OR  
-- timestamped signature  
-
-Mismatch → validation MUST fail  
-
----
-
-### 10.4 DNS Role
-
-TEA-Native:
-
-- DNS publishes certificate  
-- DNSSEC optional  
-- DNS publication REQUIRED  
-
-WebPKI:
-
-- DNS not a trust anchor  
-- DNS may provide CAA policy  
-
----
-
-## 11. Evidence Bundle (RECOMMENDED)
-
-Consumers SHOULD support TEA Evidence Bundles containing:
-
-- signature  
-- certificate  
-- timestamps  
-- transparency evidence  
-
-Benefits:
-
-- offline validation  
-- long-term verification  
-- interoperability  
-
----
-
-## 12. Important Clarifications
-
-### 12.1 Collection ≠ Artefact Signature
-
-They are distinct trust statements.
-
----
-
-### 12.2 Checksums ≠ Signatures
-
-Checksums bind, but do not authenticate.
-
----
-
-### 12.3 Artefact Reuse
-
-Allowed and expected.
-
----
-
-### 12.4 Collection Updates
-
-Do not imply artefact changes.
-
----
-
-## 13. Security Considerations
-
-### 13.1 Tampering Resistance
-
-Modification breaks signature or binding.
-
----
-
-### 13.2 Substitution Protection
-
-Prevented via signed checksums.
-
----
-
-### 13.3 Replay Protection
-
-Handled via:
-
-- timestamps  
-- transparency  
-- versioning  
-
----
-
-### 13.4 Missing Artefact Signatures
-
-- integrity preserved  
-- authenticity not guaranteed  
-
----
-
-### 13.5 Partial Validation Risk
-
-Partial validation leads to unsafe conclusions.
-
----
-
-## 14. Operational Interpretation
-
-### Publisher
-
-- collection signature = release definition  
-- artefact signature = authenticity  
-
----
-
-### Consumer
-
-- collection → inclusion  
-- artefact → authenticity  
-- checksum → binding  
-
----
-
-### Approval
-
-Collection signature corresponds to release approval.
-
----
-
-## 15. Summary
-
-TEA trust is built from:
-
-- collection signatures  
-- checksum binding  
-- artefact signatures (optional)  
-- timestamps  
-- transparency  
-- DNS (TEA-native)  
-
----
-
-## 🎯 Final Rule
-
-Collection signatures define what belongs to a release.  
-Artefact signatures define what the artefact is.
-
-Both are required for high assurance.
+> A collection binds artifacts.  
+> An evidence bundle binds trust.
