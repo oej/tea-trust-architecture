@@ -1,0 +1,440 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/tea-evidence-bundle.schema.json",
+  "title": "TEA Evidence Bundle",
+  "description": "Portable validation package for one signed TEA object. A TEA Evidence Bundle binds together the signed object identity, the digital signature, signing certificate material, timestamp evidence, transparency evidence, and optional validation material needed for long-term and offline verification.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bundleVersion",
+    "object",
+    "signature",
+    "certificate"
+  ],
+  "properties": {
+    "bundleVersion": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Version of the TEA Evidence Bundle format."
+    },
+    "object": {
+      "$ref": "#/$defs/objectRef"
+    },
+    "signature": {
+      "$ref": "#/$defs/signature"
+    },
+    "certificate": {
+      "$ref": "#/$defs/certificate"
+    },
+    "timestamps": {
+      "type": "array",
+      "description": "Timestamp evidence objects for the signature. In TEA-native deployments, at least one timestamp is expected by policy. Timestamps MUST bind to the signature or other canonical signed representation according to TEA policy.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/timestamp"
+      }
+    },
+    "transparency": {
+      "type": "array",
+      "description": "Transparency evidence entries. TEA supports multiple systems such as Rekor, Sigsum, and future SCITT-based systems. Each entry MUST bind to the same signed object used for TEA validation.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/transparencyEntry"
+      }
+    },
+    "validationMaterial": {
+      "$ref": "#/$defs/validationMaterial"
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "description": "Digest algorithm identifier, for example sha-256."
+        },
+        "value": {
+          "type": "string",
+          "description": "Digest value, typically encoded using base64url or another deployment-defined encoding."
+        }
+      }
+    },
+    "objectRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "objectType",
+        "digest"
+      ],
+      "properties": {
+        "objectType": {
+          "type": "string",
+          "description": "Type of signed TEA object. Typical values include tea-collection, sbom-artifact, discovery-document, and dsse-attestation."
+        },
+        "objectId": {
+          "type": "string",
+          "description": "Optional implementation-specific identifier for the signed object."
+        },
+        "mediaType": {
+          "type": "string",
+          "description": "Optional media type of the signed object."
+        },
+        "location": {
+          "type": "string",
+          "format": "uri",
+          "description": "Optional URI from which the object may be retrieved."
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "format": {
+          "type": "string",
+          "description": "Signature container or representation format, for example jws-detached, cms-detached, cose-sign1, dsse-envelope."
+        },
+        "algorithm": {
+          "type": "string",
+          "description": "Signature algorithm identifier, for example EdDSA."
+        },
+        "value": {
+          "type": "string",
+          "description": "Serialized signature value or signature object in the declared format."
+        },
+        "signatureDigest": {
+          "$ref": "#/$defs/digest",
+          "description": "Optional digest of the signature object. This is especially useful when timestamps and transparency evidence bind to the signature rather than the raw signed object."
+        }
+      }
+    },
+    "certificate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "certificate"
+      ],
+      "properties": {
+        "format": {
+          "type": "string",
+          "description": "Certificate serialization format, typically x509-pem or x509-der."
+        },
+        "certificate": {
+          "type": "string",
+          "description": "Signing certificate used to validate the signature."
+        },
+        "chain": {
+          "type": "array",
+          "description": "Optional certificate chain. This is commonly used for WebPKI deployments and may also be included in TEA-native environments if helpful for portability.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fingerprint": {
+          "$ref": "#/$defs/digest",
+          "description": "Optional fingerprint of the signing certificate."
+        }
+      }
+    },
+    "timestampAuthorityRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Human-readable TSA identifier."
+        },
+        "uri": {
+          "type": "string",
+          "format": "uri",
+          "description": "Optional TSA service URI."
+        }
+      }
+    },
+    "timestamp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "token"
+      ],
+      "properties": {
+        "format": {
+          "type": "string",
+          "description": "Timestamp format identifier, for example rfc3161."
+        },
+        "tsa": {
+          "$ref": "#/$defs/timestampAuthorityRef"
+        },
+        "token": {
+          "type": "string",
+          "description": "Serialized timestamp token."
+        },
+        "messageImprint": {
+          "$ref": "#/$defs/digest",
+          "description": "Optional message imprint extracted from the timestamp token. For RFC 3161, this SHOULD correspond to the hash of the signature or canonical signed representation according to TEA policy."
+        },
+        "tsaCertificateChain": {
+          "type": "array",
+          "description": "Optional TSA certificate chain included for portability and offline validation.",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "bindingRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "digest"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "object",
+            "signature",
+            "timestamped-signature",
+            "certificate",
+            "dsse-envelope"
+          ],
+          "description": "What transparency evidence is bound to. TEA policy typically prefers binding to the signature or timestamped signature, not merely the raw artifact."
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "transparencyVerification": {
+      "type": "object",
+      "description": "System-specific transparency verification material. This intentionally remains flexible so the same bundle format can support Rekor, Sigsum, and future SCITT receipts.",
+      "additionalProperties": true,
+      "properties": {
+        "entryId": {
+          "type": "string",
+          "description": "Transparency-system-specific entry identifier."
+        },
+        "logId": {
+          "type": "string",
+          "description": "Transparency log identifier."
+        },
+        "integratedTime": {
+          "type": "integer",
+          "description": "Integration time or equivalent log-recorded time if provided by the transparency system."
+        },
+        "inclusionProof": {
+          "description": "System-specific inclusion proof or equivalent proof object."
+        },
+        "signedTreeHead": {
+          "description": "Signed tree head or equivalent append-only checkpoint."
+        },
+        "receipt": {
+          "description": "Receipt object or serialized receipt for systems such as SCITT."
+        },
+        "logSignature": {
+          "type": "string",
+          "description": "Optional log signature or signed statement used by the transparency system."
+        },
+        "witnessSignatures": {
+          "type": "array",
+          "description": "Optional witness signatures, relevant for systems such as Sigsum.",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "transparencyEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "evidenceType",
+        "binding",
+        "verification"
+      ],
+      "properties": {
+        "system": {
+          "type": "string",
+          "enum": [
+            "rekor",
+            "sigsum",
+            "scitt"
+          ],
+          "description": "Transparency system identifier. Implementations should support at least one such system and be prepared for more than one."
+        },
+        "evidenceType": {
+          "type": "string",
+          "description": "System-specific evidence type, for example hashedrekord, dsse, log-entry, receipt."
+        },
+        "binding": {
+          "$ref": "#/$defs/bindingRef"
+        },
+        "verification": {
+          "$ref": "#/$defs/transparencyVerification"
+        }
+      }
+    },
+    "trustAnchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "value"
+      ],
+      "properties": {
+        "format": {
+          "type": "string",
+          "description": "Serialization format of the trust anchor or verification key."
+        },
+        "value": {
+          "type": "string",
+          "description": "Serialized trust anchor or verification key material."
+        },
+        "system": {
+          "type": "string",
+          "description": "Optional system identifier to which this trust anchor applies, for example rekor, sigsum, scitt, tsa."
+        },
+        "keyId": {
+          "type": "string",
+          "description": "Optional key identifier."
+        }
+      }
+    },
+    "validationMaterial": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "certificateDigest": {
+          "$ref": "#/$defs/digest",
+          "description": "Optional digest of the signing certificate."
+        },
+        "tsaTrustAnchors": {
+          "type": "array",
+          "description": "Optional TSA trust anchors included for portability and offline validation.",
+          "items": {
+            "$ref": "#/$defs/trustAnchor"
+          }
+        },
+        "transparencyVerificationKeys": {
+          "type": "array",
+          "description": "Optional transparency-system verification keys or trust anchors.",
+          "items": {
+            "$ref": "#/$defs/trustAnchor"
+          }
+        },
+        "notes": {
+          "type": "array",
+          "description": "Optional implementation notes or preservation comments.",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "bundleVersion": "1.0",
+      "object": {
+        "objectType": "tea-collection",
+        "objectId": "collection-123",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "abc123..."
+        }
+      },
+      "signature": {
+        "format": "jws-detached",
+        "algorithm": "EdDSA",
+        "value": "SIGBASE64...",
+        "signatureDigest": {
+          "algorithm": "sha-256",
+          "value": "sigdigest123..."
+        }
+      },
+      "certificate": {
+        "format": "x509-pem",
+        "certificate": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----"
+      },
+      "timestamps": [
+        {
+          "format": "rfc3161",
+          "tsa": {
+            "name": "tsa-eu-1"
+          },
+          "token": "BASE64TST...",
+          "messageImprint": {
+            "algorithm": "sha-256",
+            "value": "sigdigest123..."
+          }
+        }
+      ],
+      "transparency": [
+        {
+          "system": "rekor",
+          "evidenceType": "hashedrekord",
+          "binding": {
+            "type": "signature",
+            "digest": {
+              "algorithm": "sha-256",
+              "value": "sigdigest123..."
+            }
+          },
+          "verification": {
+            "entryId": "f3b62c6e-...",
+            "logId": "rekor-public",
+            "integratedTime": 1712500000,
+            "inclusionProof": {},
+            "signedTreeHead": {}
+          }
+        },
+        {
+          "system": "sigsum",
+          "evidenceType": "log-entry",
+          "binding": {
+            "type": "signature",
+            "digest": {
+              "algorithm": "sha-256",
+              "value": "sigdigest123..."
+            }
+          },
+          "verification": {
+            "entryId": "sigsum-entry-42",
+            "logSignature": "BASE64...",
+            "witnessSignatures": [
+              "BASE64...",
+              "BASE64..."
+            ]
+          }
+        }
+      ],
+      "validationMaterial": {
+        "certificateDigest": {
+          "algorithm": "sha-256",
+          "value": "certdigest456..."
+        },
+        "notes": [
+          "logged to two independent transparency systems"
+        ]
+      }
+    }
+  ]
+}

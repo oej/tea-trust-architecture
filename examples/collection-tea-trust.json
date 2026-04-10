@@ -1,0 +1,134 @@
+{
+  "collection": {
+    "uuid": "7a8c02e3-4db2-4df2-9b2d-a58af7271001",
+    "version": 1,
+    "date": "2026-04-03T12:00:00Z",
+    "belongsTo": "COMPONENT_RELEASE",
+    "releaseRef": {
+      "type": "componentRelease",
+      "uuid": "f54d1f8a-9ea1-49fd-95e2-1f6e4b421002"
+    },
+    "updateReason": {
+      "type": "INITIAL_RELEASE",
+      "comment": "Initial component release collection"
+    },
+    "artifacts": [
+      {
+        "uuid": "a4d5cfe9-26d4-4de7-a5b7-5270c0d31003",
+        "version": 1,
+        "name": "Component SBOM",
+        "type": "BOM",
+        "formats": [
+          {
+            "mediaType": "application/vnd.cyclonedx+json",
+            "description": "CycloneDX SBOM",
+            "url": "https://repo.smallbiz.example.com/components/widget-2.0.0-sbom.json",
+            "signatureUrl": "https://repo.smallbiz.example.com/components/widget-2.0.0-sbom.json.sig",
+            "checksums": [
+              {
+                "algType": "SHA-256",
+                "algValue": "9fd56a0ce4f8e2a77d60b4c55cf0c7254e48dbf1e9370f383d255b9d6b20a211"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "uuid": "d0031a93-04fc-44a7-8f4f-536868151004",
+        "version": 1,
+        "name": "Component Binary",
+        "type": "OTHER",
+        "formats": [
+          {
+            "mediaType": "application/octet-stream",
+            "description": "Compiled component binary",
+            "url": "https://repo.smallbiz.example.com/components/widget-2.0.0.bin",
+            "checksums": [
+              {
+                "algType": "SHA-256",
+                "algValue": "6f7494f2c69543b4f295f5765f7bbcb1e8fb5676989a9d95c46bc0f3fa0d1005"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "evidenceRefs": [
+      {
+        "type": "certificate",
+        "sha256": "6f0d5e6a8c1f4f88d5fd11cc495f65fc0f6f85b4b9f64f9a636ce9b0e2930b2a"
+      },
+      {
+        "type": "certificateTransparencyReceipt",
+        "sha256": "c83c80b6f3c6c2d7b1ccca0f7f4d8bafe0aa9c0c0205b5b6d8e4389a0f1f2345"
+      },
+      {
+        "type": "collectionTransparencyReceipt",
+        "sha256": "d7f0f6d8e9f21f02a7e2c44ef7b6967875fe7cde95ac2d9c4a3bc1f2b1d4f9a1"
+      },
+      {
+        "type": "timestamp",
+        "sha256": "2c4bf29035f853eb1a0d85a9bd7d8f9f64df928b85adf3f9517c425df8734401"
+      }
+    ]
+  },
+  "signature": {
+    "type": "x509",
+    "algorithm": "Ed25519",
+    "value": "base64-signature-over-canonicalized-collection-object",
+    "certificate": {
+      "format": "PEM",
+      "value": "-----BEGIN CERTIFICATE-----\nMIIBTEATRUSTEXAMPLE...==\n-----END CERTIFICATE-----"
+    },
+    "trustModel": "tea-trust"
+  },
+  "evidence": {
+    "certificateTransparency": {
+      "system": "sigsum",
+      "receipt": {
+        "contentType": "application/json",
+        "value": {
+          "logId": "sigsum-log-1",
+          "leafHash": "c83c80b6f3c6c2d7b1ccca0f7f4d8bafe0aa9c0c0205b5b6d8e4389a0f1f2345",
+          "inclusionProof": {
+            "treeSize": 148322,
+            "rootHash": "9a1d8d0fcb0a1f9f2d7e3c4b5a6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f12345678",
+            "path": [
+              "f1d2d2f924e986ac86fdf7b36c94bcdf32beec15a6a4d29ddc7f7b6d3f0f4c12"
+            ]
+          }
+        }
+      }
+    },
+    "collectionTransparency": {
+      "system": "sigsum",
+      "receipt": {
+        "contentType": "application/json",
+        "value": {
+          "logId": "sigsum-log-1",
+          "leafHash": "d7f0f6d8e9f21f02a7e2c44ef7b6967875fe7cde95ac2d9c4a3bc1f2b1d4f9a1",
+          "inclusionProof": {
+            "treeSize": 148330,
+            "rootHash": "8f1d8d0fcb0a1f9f2d7e3c4b5a6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f12345670",
+            "path": [
+              "0123d2f924e986ac86fdf7b36c94bcdf32beec15a6a4d29ddc7f7b6d3f0f4aaa"
+            ]
+          }
+        }
+      }
+    },
+    "timestamp": {
+      "type": "rfc3161",
+      "contentType": "application/timestamp-reply",
+      "value": "base64-rfc3161-token"
+    },
+    "dns": {
+      "ownerName": "4a9f2c8d0f1a2b3c4d5e6f77889900aabbccddeeff00112233445566778899aa.smallbiz.example.com",
+      "recordType": "CERT",
+      "snapshot": {
+        "capturedAt": "2026-04-03T12:01:00Z",
+        "dnssecValidated": true
+      }
+    }
+  }
+}

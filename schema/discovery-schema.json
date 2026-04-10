@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/tea-well-known-v2.schema.json",
+  "title": "TEA .well-known discovery document v2",
+  "description": "Discovery document for TEA endpoints, supported trust models, and endpoint roles used by the TEA trust architecture.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "issuer",
+    "endpoints",
+    "trustModelsSupported"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 2,
+      "description": "Schema version for this discovery document."
+    },
+    "issuer": {
+      "type": "string",
+      "format": "hostname",
+      "description": "Manufacturer-controlled DNS name that publishes this .well-known discovery document."
+    },
+    "trustModelsSupported": {
+      "type": "array",
+      "description": "Trust models supported by this publisher.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["webpki", "taps"]
+      }
+    },
+    "defaultTrustModel": {
+      "type": "string",
+      "description": "Default trust model to use when multiple trust models are supported and no stricter local policy applies.",
+      "enum": ["webpki", "taps"]
+    },
+    "endpoints": {
+      "type": "array",
+      "description": "List of TEA service endpoints and their operational roles.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/endpoint"
+      }
+    },
+    "taps": {
+      "$ref": "#/$defs/tapsMetadata"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "trustModelsSupported": {
+            "contains": { "const": "taps" }
+          }
+        },
+        "required": ["trustModelsSupported"]
+      },
+      "then": {
+        "required": ["taps"]
+      }
+    },
+    {
+      "if": {
+        "required": ["defaultTrustModel"]
+      },
+      "then": {
+        "properties": {
+          "trustModelsSupported": {
+            "contains": {
+              "const": { "$data": "/defaultTrustModel" }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "versions", "role", "operatorType"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Base URL of the TEA API endpoint."
+        },
+        "versions": {
+          "type": "array",
+          "description": "Supported TEA API versions for this endpoint.",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+(?:\\.\\d+)?(?:-[0-9A-Za-z.-]+)?$"
+          }
+        },
+        "priority": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1,
+          "description": "Relative preference among endpoints of the same role."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["primary", "persistence"],
+          "description": "Operational role of this endpoint."
+        },
+        "operatorType": {
+          "type": "string",
+          "enum": ["manufacturer", "thirdParty"],
+          "description": "Who operates this endpoint."
+        },
+        "trustModelsSupported": {
+          "type": "array",
+          "description": "Optional per-endpoint restriction of supported trust models. If absent, the endpoint inherits the top-level trustModelsSupported set.",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["webpki", "taps"]
+          }
+        }
+      }
+    },
+    "tapsMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manufacturerTrustAnchorDns"],
+      "properties": {
+        "manufacturerTrustAnchorDns": {
+          "type": "string",
+          "format": "hostname",
+          "description": "Manufacturer-controlled DNS name used for TAPS trust-anchor publication."
+        },
+        "persistenceTrustAnchorDns": {
+          "type": "string",
+          "format": "hostname",
+          "description": "Optional third-party DNS name used for TAPS trust-anchor continuity and long-term availability."
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "schemaVersion": 2,
+      "issuer": "manufacturer.example.com",
+      "trustModelsSupported": ["webpki", "taps"],
+      "defaultTrustModel": "taps",
+      "endpoints": [
+        {
+          "url": "https://api.manufacturer.example.com/tea",
+          "versions": ["1.0.0"],
+          "priority": 1,
+          "role": "primary",
+          "operatorType": "manufacturer",
+          "trustModelsSupported": ["webpki", "taps"]
+        },
+        {
+          "url": "https://archive.provider.example.net/tea",
+          "versions": ["1.0.0"],
+          "priority": 0.5,
+          "role": "persistence",
+          "operatorType": "thirdParty",
+          "trustModelsSupported": ["taps"]
+        }
+      ],
+      "taps": {
+        "manufacturerTrustAnchorDns": "123456.teatrust.manufacturer.example.com",
+        "persistenceTrustAnchorDns": "123456.teatrust.archive.example.net"
+      }
+    }
+  ]
+}

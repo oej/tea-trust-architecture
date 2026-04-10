@@ -1,0 +1,62 @@
+{
+  "collection": {
+    "uuid": "605d0ecb-1057-40e4-9abf-c400b10f0345",
+    "version": 1,
+    "date": "2026-03-31T18:08:00Z",
+    "belongsTo": "PRODUCT_RELEASE",
+    "releaseRef": {
+      "type": "productRelease",
+      "uuid": "b2d4f4b8-2df7-4a6d-b0a9-95a4e7afbe91"
+    },
+    "updateReason": {
+      "type": "INITIAL_RELEASE",
+      "comment": "Initial collection for product release 1.0.0"
+    },
+    "artifacts": [
+      {
+        "uuid": "1cb47b95-8bf8-3bad-a5a4-0d54d86e10ce",
+        "version": 1,
+        "name": "Build SBOM",
+        "type": "BOM",
+        "createdDate": "2026-03-31T17:20:00Z",
+        "formats": [
+          {
+            "mediaType": "application/vnd.cyclonedx+json",
+            "description": "CycloneDX SBOM (JSON)",
+            "url": "https://repo.example.org/example-1.0.0.cdx.json",
+            "checksums": [
+              {
+                "algType": "SHA-256",
+                "algValue": "9da736a1cdd27231e70187cbc67398d29ca0b714f885e7032da9f1fb247693c1"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "uuid": "6b74df0d-4f2d-4a9c-9f16-6d3d865f3d9b",
+        "version": 1,
+        "name": "Firmware Image",
+        "type": "OTHER",
+        "formats": [
+          {
+            "mediaType": "application/octet-stream",
+            "description": "Firmware binary",
+            "url": "https://repo.example.org/fw-1.0.0.bin",
+            "checksums": [
+              {
+                "algType": "SHA-256",
+                "algValue": "d30f8b1a29a02373f5d2f29c0b56e0a8c8cb417b8d5d4d6dc4d5b9d4d1e0a123"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "signature": {
+    "type": "x509",
+    "algorithm": "Ed25519",
+    "value": "base64-signature-over-canonicalized-collection-object"
+  }
+}

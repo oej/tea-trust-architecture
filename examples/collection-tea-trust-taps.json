@@ -1,0 +1,152 @@
+{
+  "collection": {
+    "uuid": "2f986f56-7a31-40a1-a045-11dca1ba2001",
+    "version": 3,
+    "date": "2026-04-05T09:30:00Z",
+    "belongsTo": "PRODUCT_RELEASE",
+    "releaseRef": {
+      "type": "productRelease",
+      "uuid": "ef3b4f02-1f38-4bb9-92d5-6ea07d182002"
+    },
+    "updateReason": {
+      "type": "METADATA_CORRECTION",
+      "comment": "Collection updated after acquisition; artefacts unchanged"
+    },
+    "artifacts": [
+      {
+        "uuid": "7f4c2ce1-6efb-44d5-8f39-e60d91c92003",
+        "version": 1,
+        "name": "Product SBOM",
+        "type": "BOM",
+        "formats": [
+          {
+            "mediaType": "application/vnd.cyclonedx+json",
+            "description": "CycloneDX SBOM",
+            "url": "https://archive.teaservice.example.net/releases/1.2.0/product-sbom.json",
+            "signatureUrl": "https://archive.teaservice.example.net/releases/1.2.0/product-sbom.json.sig",
+            "checksums": [
+              {
+                "algType": "SHA-256",
+                "algValue": "0d98f4ed72d12d837b4f1fcf6e8a7ab6d2cb1f1e2d7f39ec4ad6f4ef4b8e1022"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "uuid": "2a5a51a4-09c7-4a69-80d6-8e2ff3dd2004",
+        "version": 1,
+        "name": "Installer Binary",
+        "type": "OTHER",
+        "formats": [
+          {
+            "mediaType": "application/octet-stream",
+            "description": "Installer binary",
+            "url": "https://archive.teaservice.example.net/releases/1.2.0/installer.bin",
+            "checksums": [
+              {
+                "algType": "SHA-256",
+                "algValue": "bc32eaa6cfe98e2d2bb0f5beae5221a0ac0c4eb862f4f6f314dc2ec6190bb005"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "evidenceRefs": [
+      {
+        "type": "certificate",
+        "sha256": "6f0d5e6a8c1f4f88d5fd11cc495f65fc0f6f85b4b9f64f9a636ce9b0e2930b2a"
+      },
+      {
+        "type": "certificateTransparencyReceipt",
+        "sha256": "c83c80b6f3c6c2d7b1ccca0f7f4d8bafe0aa9c0c0205b5b6d8e4389a0f1f2345"
+      },
+      {
+        "type": "collectionTransparencyReceipt",
+        "sha256": "d7f0f6d8e9f21f02a7e2c44ef7b6967875fe7cde95ac2d9c4a3bc1f2b1d4f9a1"
+      },
+      {
+        "type": "timestamp",
+        "sha256": "2c4bf29035f853eb1a0d85a9bd7d8f9f64df928b85adf3f9517c425df8734401"
+      },
+      {
+        "type": "tapsBinding",
+        "sha256": "5b113f394a5cf0f43f771e11d4c3d49c672fb0a2db4c03ae5a4d9d1f81eb999a"
+      }
+    ]
+  },
+  "signature": {
+    "type": "x509",
+    "algorithm": "Ed25519",
+    "value": "base64-signature-over-canonicalized-collection-object",
+    "certificate": {
+      "format": "PEM",
+      "value": "-----BEGIN CERTIFICATE-----\nMIIBTEATRUSTTAPSEXAMPLE...==\n-----END CERTIFICATE-----"
+    },
+    "trustModel": "hybrid"
+  },
+  "evidence": {
+    "certificateTransparency": {
+      "system": "sigsum",
+      "receipt": {
+        "contentType": "application/json",
+        "value": {
+          "logId": "sigsum-log-1",
+          "leafHash": "c83c80b6f3c6c2d7b1ccca0f7f4d8bafe0aa9c0c0205b5b6d8e4389a0f1f2345"
+        }
+      }
+    },
+    "collectionTransparency": {
+      "system": "sigsum",
+      "receipt": {
+        "contentType": "application/json",
+        "value": {
+          "logId": "sigsum-log-1",
+          "leafHash": "d7f0f6d8e9f21f02a7e2c44ef7b6967875fe7cde95ac2d9c4a3bc1f2b1d4f9a1"
+        }
+      }
+    },
+    "timestamp": {
+      "type": "rfc3161",
+      "contentType": "application/timestamp-reply",
+      "value": "base64-rfc3161-token"
+    },
+    "taps": {
+      "binding": {
+        "version": 1,
+        "manufacturerDomain": "smallbiz.example.com",
+        "publisherIdentity": {
+          "fingerprintSha256": "4a9f2c8d0f1a2b3c4d5e6f77889900aabbccddeeff00112233445566778899aa",
+          "publisherSanDns": "4a9f2c8d0f1a2b3c4d5e6f77889900aabbccddeeff00112233445566778899aa.smallbiz.example.com",
+          "tapsSanDns": "4a9f2c8d0f1a2b3c4d5e6f77889900aabbccddeeff00112233445566778899aa.teatrust.example.org"
+        },
+        "certificateSha256": "6f0d5e6a8c1f4f88d5fd11cc495f65fc0f6f85b4b9f64f9a636ce9b0e2930b2a",
+        "created": "2026-04-05T09:00:00Z",
+        "signedByManufacturer": {
+          "type": "x509",
+          "algorithm": "Ed25519",
+          "value": "base64-signature-over-binding-object"
+        }
+      },
+      "transparency": {
+        "system": "sigsum",
+        "receipt": {
+          "contentType": "application/json",
+          "value": {
+            "logId": "sigsum-log-1",
+            "leafHash": "5b113f394a5cf0f43f771e11d4c3d49c672fb0a2db4c03ae5a4d9d1f81eb999a"
+          }
+        }
+      }
+    },
+    "dns": {
+      "ownerName": "4a9f2c8d0f1a2b3c4d5e6f77889900aabbccddeeff00112233445566778899aa.teatrust.example.org",
+      "recordType": "CERT",
+      "snapshot": {
+        "capturedAt": "2026-04-05T09:05:00Z",
+        "dnssecValidated": true
+      }
+    }
+  }
+}
