@@ -1,332 +1,519 @@
-📘 TEA Publisher Workflow Overview (Updated)
+# 📘 TEA Publisher Workflow
+**Version:** 1.0  
+**Status:** Draft (Normative, Implementation-Ready)
 
-Product Setup, Release Publication, and Lifecycle Management
+---
 
-⸻
+# Table of Contents
 
-1. Purpose
+1. [Introduction](#1-introduction)  
+2. [Purpose](#2-purpose)  
+3. [Core Principles](#3-core-principles)  
+4. [Workflow Phases](#4-workflow-phases)  
+5. [Object State Model](#5-object-state-model)  
+6. [TEA Artifact Lifecycle](#6-tea-artifact-lifecycle)  
+7. [TEA Collection Workflow](#7-tea-collection-workflow)  
+8. [Approval and Commit](#8-approval-and-commit)  
+9. [CI/CD and Automation](#9-cicd-and-automation)  
+10. [Archival](#10-archival)  
+11. [Logging and Audit](#11-logging-and-audit)  
+12. [Relationship to Evidence Bundles](#12-relationship-to-evidence-bundles)  
+13. [Security Considerations](#13-security-considerations)  
+14. [Final Statement](#final-statement)  
 
-This document defines the publisher-side workflow for:
- * setting up products and components
- * managing releases
- * preparing and publishing collections
- * handling artefacts and CLE
- * enforcing lifecycle rules and immutability
+---
 
-It provides a conceptual model of objects, states, and transitions used by TEA publisher implementations.
+# 1. Introduction
 
-Core object definitions are specified in the TEA Consumer API. This document describes how those objects are created, updated, and published.
+This document defines the **TEA publisher workflow**, including:
 
-⸻
+- product and component setup  
+- release preparation  
+- TEA collection creation and publication  
+- TEA artifact lifecycle management  
+- approval and commit semantics  
 
-2. Core Principles
+This specification describes the **publisher-side behavior** required to ensure:
 
-2.1 Separation of Concerns
+- controlled release publication  
+- integrity of published data  
+- long-term auditability  
+
+Core data structures are defined in the TEA Consumer API and related specifications.  
+This document defines how those objects are created, transitioned, and published.
+
+ [oai_citation:0‡27-tea-publisher-workflow.md](sediment://file_000000009cc472469ac457802b5ac882)
+
+---
+
+# 2. Purpose
+
+The TEA publisher workflow ensures that:
+
+- releases are intentional and authorized  
+- artifacts and collections are immutable once published  
+- trust establishment is consistent with the TEA trust architecture  
+- publication is auditable and reproducible  
+
+---
+
+# 3. Core Principles
+
+## 3.1 Separation of Concerns
 
 The workflow separates:
- * product definition
- * release publication
- * trust establishment
 
-⸻
+- product and component definition  
+- release publication  
+- trust establishment  
 
-2.2 Collection as the Release Statement
+---
 
-A collection is the authoritative, versioned statement describing:
- * which artefacts belong to a release
- * the metadata of that release
+## 3.2 TEA Collection as Release Statement
 
-A release is considered published only when a collection is published.
+A **TEA collection** is the authoritative statement describing:
 
-⸻
+- which TEA artifacts belong to a release  
+- the metadata of that release  
 
-2.3 Immutability After Publication
+A release is considered published **only when a collection is published**.
+
+---
+
+## 3.3 Immutability After Publication
 
 Once an object participates in a published release:
- * it MUST NOT be modified in a way that changes published meaning
- * it MUST remain available for long-term validation
 
-⸻
+- it MUST NOT be modified in a way that changes its meaning  
+- it MUST remain available for long-term validation  
 
-2.4 Consumer Visibility
+---
+
+## 3.4 Consumer Visibility
 
 Consumers:
- * see only published objects
- * do not see draft or intermediate workflow states
 
-⸻
+- MUST only see published objects  
+- MUST NOT see draft or intermediate states  
 
-3. Workflow Phases
+---
 
-The publisher workflow consists of two main phases:
+## 3.5 Controlled Publication Boundary
 
-⸻
+Publication is a **controlled operation**.
 
-3.1 Product Setup Phase
+> CI/CD prepares — humans authorize — TEA commits
+
+---
+
+# 4. Workflow Phases
+
+The publisher workflow consists of two primary phases:
+
+---
+
+## 4.1 Product Setup Phase
 
 Defines long-lived objects:
- * Product
- * Component
- * ProductRelease
- * ComponentRelease
- * Identifiers (TEI, CPE, PURL, etc.)
- * CLE
 
-Objects in this phase are initially mutable.
+- Product  
+- Component  
+- ProductRelease  
+- ComponentRelease  
+- Identifiers (TEI, CPE, PURL, etc.)  
+- CLE (lifecycle information)  
 
-⸻
+These objects:
 
-3.2 Release Publication Phase
+- are initially mutable  
+- define identity and lifecycle context  
 
-Defines release-specific transparency:
- * Artefacts
- * Collections
- * Collection versions
+---
+
+## 4.2 Release Publication Phase
+
+Defines release-specific objects:
+
+- TEA artifacts  
+- TEA collections  
+- collection versions  
 
 This phase introduces:
- * signing
- * validation
- * approval
- * publication
 
-⸻
+- signing  
+- evidence generation  
+- validation  
+- approval  
+- publication  
 
-4. Object State Model
+---
 
-4.1 Product, Component, and Releases
+# 5. Object State Model
 
-States:
- * draft
- * published
- * archived
-
-Rules:
- * objects MAY be modified or deleted in draft
- * objects MUST NOT be deleted after published
- * archived indicates retained but inactive
-
-⸻
-
-4.2 Collection
+## 5.1 Product, Component, and Releases
 
 States:
- * draft
- * readyForSigning
- * signed
- * published
+
+- `draft`  
+- `published`  
+- `archived`  
 
 Rules:
- * a collection becomes authoritative only in published
- * older published collections remain published
- * no superseded state exists
 
-⸻
+- objects MAY be modified or deleted in `draft`  
+- objects MUST NOT be deleted after `published`  
+- `archived` indicates retained but inactive  
 
-4.3 Artifact
+---
+
+## 5.2 TEA Collection
 
 States:
- * draft
- * published
- * archived
+
+- `draft`  
+- `readyForSigning`  
+- `signed`  
+- `published`  
 
 Rules:
- * draft artifacts are not visible to consumers
- * an artifact becomes published when referenced by a published collection
- * published artifacts MUST NOT be modified or deleted
 
-⸻
+- a collection becomes authoritative only in `published`  
+- previously published collections remain valid  
+- collections are immutable once published  
 
-5. Artifact Lifecycle
+---
 
-5.1 Upload
+## 5.3 TEA Artifact
 
-Artifacts are uploaded in draft state.
+States:
+
+- `draft`  
+- `published`  
+- `archived`  
+
+Rules:
+
+- draft artifacts are not visible to consumers  
+- an artifact becomes published when referenced by a published collection  
+- published artifacts MUST NOT be modified or deleted  
+
+---
+
+# 6. TEA Artifact Lifecycle
+
+## 6.1 Upload
+
+Artifacts are uploaded in `draft` state.
 
 They:
- * MAY be modified or deleted
- * are not visible to consumers
 
-⸻
+- MAY be modified or deleted  
+- MUST NOT be visible to consumers  
 
-5.2 Inclusion in Collection
+---
 
-Artifacts may be referenced by:
- * draft collections
- * published collections
+## 6.2 Inclusion in Collection
 
-⸻
+Artifacts MAY be referenced by:
 
-5.3 Publication
+- draft collections  
+- published collections  
 
-An artifact transitions to published when:
- * it is referenced by at least one published collection
+---
 
-⸻
+## 6.3 Publication
 
-5.4 Immutability
+An artifact transitions to `published` when:
+
+- it is referenced by at least one published collection  
+
+---
+
+## 6.4 Immutability
 
 Artifacts referenced by published collections:
- * MUST NOT be modified
- * MUST NOT be deleted
 
-⸻
+- MUST NOT be modified  
+- MUST NOT be deleted  
 
-5.5 Garbage Collection
+---
 
-Implementations MAY delete artifacts if:
- * they are in draft state
- * they are not included in any collection within a configured time
+## 6.5 Garbage Collection
+
+Implementations MAY remove artifacts if:
+
+- they are in `draft`  
+- they are not referenced within a configured time  
 
 Garbage collection MUST NOT remove:
- * artifacts referenced by published collections
 
-⸻
+- artifacts referenced by published collections  
 
-6. Collection Workflow
+---
 
-6.1 Creation
+# 7. TEA Collection Workflow
+
+## 7.1 Creation
 
 A collection is created for:
- * a product release
- * or a component release
 
-⸻
+- a product release  
+- or a component release  
 
-6.2 Preparation
+---
+
+## 7.2 Preparation
 
 The collection is populated with:
- * artifact references
- * metadata
- * version information
- * reason for the collection version
 
-⸻
+- artifact references  
+- metadata  
+- version information  
+- change rationale  
 
-6.3 Signing Preparation
+---
+
+## 7.3 Ready for Signing
 
 The collection transitions to:
- * readyForSigning
 
-At this point:
- * the content MUST be deterministic
- * a canonical signing payload is generated
+- `readyForSigning`
 
-⸻
+Requirements:
 
-6.4 Signing
+- content MUST be deterministic  
+- canonical representation MUST be used (RFC 8785)  
 
-The collection is signed externally or internally.
+---
+
+## 7.4 Evidence Bundle Generation
+
+Before signing completion, implementations MUST generate **evidence bundles** for:
+
+- each TEA artifact  
+- the TEA collection  
+
+Evidence bundles MUST include:
+
+- signature  
+- certificate  
+- timestamp(s)  
+- transparency evidence  
+
+---
+
+## 7.5 Signing
+
+The collection is signed.
 
 After signing:
- * state becomes signed
 
-⸻
+- state becomes `signed`  
 
-6.5 Validation and Upload
+---
 
-The signed collection and evidence are uploaded.
+## 7.6 Validation
 
-The TEA service validates:
- * signatures
- * evidence
+The TEA service MUST validate:
 
-⸻
+- evidence bundles  
+- binding consistency  
+- required trust model constraints  
 
-6.6 Publication
+---
+
+## 7.7 Publication
 
 After approval:
- * the collection transitions to published
- * the associated release becomes published
 
-⸻
+- the collection transitions to `published`  
+- the associated release becomes published  
 
-6.7 Collection Versioning
+---
+
+## 7.8 Versioning
 
 If updates are required:
- * a new collection version is created
- * previous versions remain published
 
-⸻
+- a new collection version MUST be created  
+- previous versions MUST remain published  
 
-7. Approval and Commit
+---
+
+# 8. Approval and Commit
 
 Publication requires:
- * explicit approval
- * authentication (e.g., MFA)
+
+- explicit approval  
+- strong authentication (e.g., MFA)  
 
 Implementations MAY require:
- * multi-party approval (e.g., 2-of-N)
 
-Commit:
- * freezes the collection
- * makes it authoritative
+- multi-party approval  
 
-⸻
+---
 
-8. CI/CD and Automation
+## 8.1 Commit Step
 
-8.1 Automation Scope
+The commit step:
 
-CI/CD MAY handle:
- * artifact creation
- * artifact upload
- * collection creation
- * collection preparation
- * signing
- * draft upload
+- freezes the collection  
+- validates all evidence  
+- enforces policy  
+- records approver identity and time  
 
-⸻
+---
 
-8.2 Restricted Operations
+## 8.2 Normative Requirements
 
-CI/CD SHOULD NOT perform:
- * final publication (commit)
+The commit operation MUST:
 
-⸻
+- validate all evidence bundles  
+- verify all bindings  
+- enforce trust model requirements  
+- reject incomplete or invalid evidence  
 
-8.3 Human-Controlled Boundary
+---
+
+# 9. CI/CD and Automation
+
+## 9.1 Allowed Operations
+
+CI/CD MAY perform:
+
+- artifact creation  
+- artifact upload  
+- collection preparation  
+- signing  
+- evidence bundle generation  
+
+---
+
+## 9.2 Restricted Operations
+
+CI/CD MUST NOT perform:
+
+- final publication (commit)  
+
+---
+
+## 9.3 Human-Controlled Boundary
 
 Publication MUST require:
- * human approval
- * authentication
 
-⸻
+- human approval  
+- authentication  
 
-9. Archival
+---
 
-Objects MAY transition to archived.
+# 10. Archival
+
+Objects MAY transition to `archived`.
 
 Archival:
- * is non-destructive
- * does not remove published data
+
+- is non-destructive  
+- does not remove published data  
 
 Archived objects:
- * remain accessible as required
 
-⸻
+- MUST remain accessible  
 
-10. Logging and Audit
+---
+
+# 11. Logging and Audit
 
 All workflow actions MUST be logged.
 
 Each log entry MUST include:
- * actor identity
- * timestamp
- * action
- * object type
- * object identifier
- * result
+
+- actor identity  
+- timestamp  
+- action  
+- object type  
+- object identifier  
+- result  
 
 Implementations SHOULD use standardized event identifiers.
 
-⸻
+---
 
-11. Summary
+# 12. Relationship to Evidence Bundles
 
-The TEA publisher workflow:
- * separates setup from publication
- * uses collections as authoritative release statements
- * ensures immutability of published data
- * controls publication through approval
- * exposes only published data to consumers
- * supports long-term retention and audit
+Evidence bundles are central to publication.
+
+---
+
+## 12.1 Role
+
+Evidence bundles:
+
+- provide verifiable trust material  
+- enable long-term validation  
+- support offline verification  
+
+---
+
+## 12.2 Publication Requirement
+
+All published TEA artifacts MUST have:
+
+- a valid evidence bundle  
+
+---
+
+## 12.3 Reuse
+
+Evidence bundles:
+
+- MAY be reused across collections  
+- MUST refer only to TEA artifacts  
+
+---
+
+# 13. Security Considerations
+
+---
+
+## 13.1 Controlled Publication
+
+Unauthorized publication MUST be prevented through:
+
+- authentication  
+- approval  
+- commit validation  
+
+---
+
+## 13.2 Ephemeral Keys
+
+Signing keys SHOULD be:
+
+- short-lived  
+- generated per release  
+
+---
+
+## 13.3 Evidence Integrity
+
+All trust depends on:
+
+- correct evidence bundle generation  
+- strict validation during commit  
+
+---
+
+# Final Statement
+
+The TEA publisher workflow ensures that:
+
+- releases are intentional  
+- publication is controlled  
+- artifacts and collections are immutable  
+- trust is established through verifiable evidence  
+
+---
+
+## Key Principle
+
+> Publication is not complete until evidence is validated and the collection is committed.
