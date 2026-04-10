@@ -1,21 +1,55 @@
-# 📄 profiles/high-assurance-profile.md
+# 📘 TEA Trust Architecture — High Assurance Profile
+**Version:** 1.0  
+**Status:** Draft (Normative, Implementation-Ready)
 
-# TEA High Assurance Profile (v1.0)
+---
+
+## Status
+
+This document defines the **High Assurance Profile** for the TEA Trust Architecture.
+
+This profile specifies **strict validation and publication requirements** intended for:
+
+- regulated environments (e.g., CRA-aligned systems)  
+- safety-critical software supply chains  
+- long-term validation (≥10 years)  
+
+The key words **MUST**, **SHOULD**, and **MAY** are to be interpreted as described in:
+
+- RFC 2119  
+- RFC 8174  
+
+---
+
+## Table of Contents
+
+1. [Purpose](#1-purpose)  
+2. [Scope](#2-scope)  
+3. [Core Principles](#3-core-principles)  
+4. [Trust Model Requirements](#4-trust-model-requirements)  
+5. [Signature and Certificate Requirements](#5-signature-and-certificate-requirements)  
+6. [Timestamp Requirements](#6-timestamp-requirements)  
+7. [Transparency Requirements (Sigsum)](#7-transparency-requirements-sigsum)  
+8. [Evidence Bundle Requirements](#8-evidence-bundle-requirements)  
+9. [Evidence Binding Requirements](#9-evidence-binding-requirements)  
+10. [Publication Requirements](#10-publication-requirements)  
+11. [Consumer Validation Requirements](#11-consumer-validation-requirements)  
+12. [Trust Anchors](#12-trust-anchors)  
+13. [Failure Handling](#13-failure-handling)  
+14. [Security Considerations](#14-security-considerations)  
+15. [Final Statement](#15-final-statement)  
 
 ---
 
 ## 1. Purpose
 
-This document defines the **High Assurance Profile** for TEA.
+This profile defines a **strict validation and publication policy** for TEA.
 
-It specifies **stricter validation and publication requirements** for:
+It ensures that:
 
-- regulated environments (e.g., EU CRA)
-- critical infrastructure
-- long-term archival validation
-- high-risk supply chains
-
-This profile builds on the baseline TEA model and introduces **mandatory multi-anchor trust validation**.
+- trust is derived from multiple independent evidence sources  
+- long-term validation is possible without relying on live services  
+- publication is controlled and auditable  
 
 ---
 
@@ -23,368 +57,376 @@ This profile builds on the baseline TEA model and introduces **mandatory multi-a
 
 This profile applies to:
 
-- discovery
-- consumer validation
-- publication
-
-It defines **mandatory requirements** beyond the base TEA specification.
-
----
-
-## 3. Core Principle
-
-> **High assurance requires multiple independent, verifiable trust anchors.**
-
-No single mechanism (certificate, DNS, or signature alone) is sufficient.
+- TEA artifacts  
+- TEA collections  
+- discovery documents (when signed)  
+- signing certificates  
 
 ---
 
-## 4. Mandatory Trust Anchors
+## 3. Core Principles
 
-A compliant implementation MUST validate at least **three independent trust anchors**:
+### 3.1 Multi-Source Trust
 
-| Anchor | Purpose |
-|--------|--------|
-| Signature | integrity |
-| Timestamp | time of existence |
-| Certificate | identity context |
-| DNS (TEA-native) | publication |
-| Transparency | auditability |
+Trust MUST be derived from:
 
----
-
-### Rule
-
-> At least **three anchors MUST be valid** for acceptance.
+- signature  
+- timestamp  
+- transparency  
+- trust anchor validation  
 
 ---
 
-## 5. Discovery Requirements
+### 3.2 Evidence Over Keys
+
+Long-term trust is based on:
+
+> preserved evidence, not persistent keys
 
 ---
 
-### 5.1 Mandatory Controls
+### 3.3 Immutability
 
-Discovery MUST:
+All published objects:
 
-- be signed  
-- include a TSA timestamp  
-- be schema-valid  
-
----
-
-### 5.2 Transparency
-
-Discovery MUST:
-
-- be logged in a transparency system  
-- provide verifiable inclusion proof  
+- MUST be immutable  
+- MUST remain available  
 
 ---
 
-### 5.3 DNS Validation (TEA-Native)
+### 3.4 Offline Verifiability
 
-If TEA-native is used:
+Validation MUST be possible without:
 
-- discovery certificate MUST be published in DNS  
-- DNSSEC MUST be validated  
-
----
-
-### 5.4 Failure Conditions
-
-Discovery MUST fail if:
-
-- signature invalid  
-- timestamp missing or invalid  
-- DNSSEC validation fails (when TEA-native)  
-- transparency inclusion missing  
+- network access  
+- live log queries  
 
 ---
 
-## 6. Consumer Validation Requirements
+## 4. Trust Model Requirements
+
+This profile requires:
+
+- TEA-native trust model OR WebPKI with additional constraints  
+- strict evidence validation  
+
+For TEA-native:
+
+- DNS-based trust anchors MUST be used  
+- DNSSEC SHOULD be used when available  
 
 ---
 
-### 6.1 Mandatory Checks
+## 5. Signature and Certificate Requirements
 
-A consumer MUST:
+### 5.1 Algorithms
 
-1. validate collection signature  
-2. validate collection timestamp  
-3. verify artefact checksum binding  
-4. require artefact signature  
-5. validate artefact timestamp  
-6. validate certificate validity at timestamp  
-7. validate transparency inclusion  
-8. validate trust anchor (DNS or PKI)  
+- Ed25519 SHOULD be used  
 
 ---
 
-### 6.2 DNSSEC Requirement (TEA-Native)
-
-If TEA-native is used:
-
-- DNSSEC validation MUST succeed  
-- failure MUST result in rejection  
-
----
-
-### 6.3 Transparency Requirement
-
-Consumers MUST:
-
-- verify inclusion proof  
-- verify log signature or checkpoint  
-- ensure log consistency  
-
----
-
-### 6.4 Timestamp Requirement
-
-Consumers MUST:
-
-- verify TSA signature  
-- validate TSA certificate chain  
-- ensure timestamp is within certificate validity  
-
----
-
-### 6.5 Multi-TSA Recommendation
-
-Implementations SHOULD:
-
-- use multiple TSA providers  
-- compare timestamps for consistency  
-
----
-
-## 7. Publication Requirements
-
----
-
-### 7.1 Commit Control
-
-Publication MUST:
-
-- require strong authentication (MFA)  
-- record approver identity  
-- record timestamp of approval  
-- freeze release state  
-
----
-
-### 7.2 Evidence Validation at Commit
-
-Before commit, the system MUST validate:
-
-- all signatures  
-- all timestamps  
-- all certificates  
-- transparency inclusion  
-- DNS publication (TEA-native)  
-
----
-
-### 7.3 DNS Publication (TEA-Native)
-
-If TEA-native is used:
-
-- certificate MUST be published in DNS  
-- DNSSEC MUST be active and valid  
-- publication MUST be authorized  
-
----
-
-### 7.4 Transparency Submission
-
-Publication MUST include:
-
-- submission of artefacts and/or collection  
-- receipt or inclusion proof  
-
----
-
-## 8. Evidence Retention
-
----
-
-### 8.1 Mandatory Retention
-
-The following MUST be preserved:
-
-- artefacts  
-- artefact signatures  
-- collection  
-- collection signature  
-- certificate  
-- timestamp tokens  
-- transparency receipts  
-
----
-
-### 8.2 Retention Duration
-
-Evidence MUST be retained for:
-
-- at least 10 years  
-- or as required by applicable regulation  
-
----
-
-## 9. WebPKI Requirements
-
----
-
-### 9.1 Certificate Validation
-
-Consumers MUST:
-
-- validate full PKIX chain  
-- enforce certificate validity  
-
----
-
-### 9.2 CAA Enforcement
-
-Consumers MUST:
-
-- perform CAA lookup  
-- reject certificates issued by unauthorized CA  
-
----
-
-### 9.3 DNS Role
-
-| Element | Role |
-|--------|------|
-| DNS CERT | MUST NOT be used |
-| DNSSEC | OPTIONAL |
-| CAA | REQUIRED |
-| A/AAAA | transport only |
-
----
-
-## 10. TEA-Native Requirements
-
----
-
-### 10.1 Certificate Profile
+### 5.2 Certificate Lifetime
 
 Certificates MUST:
 
-- be self-signed  
-- use Ed25519 (preferred)  
-- include fingerprint-derived SAN  
+- be short-lived  
+- have a lifetime ≤ 1 hour  
 
 ---
 
-### 10.2 Fingerprint Binding
+### 5.3 Key Usage
+
+- keys MUST be ephemeral  
+- private keys MUST be destroyed after signing  
+
+---
+
+### 5.4 Certificate Binding
+
+Certificates MUST:
+
+- contain exactly one primary SAN DNS entry  
+- the primary SAN DNS entry MUST:
+  - represent the manufacturer-controlled domain  
+  - include the fingerprint-derived identifier  
+
+Certificates MAY additionally include:
+
+- one optional secondary SAN DNS entry  
+
+The secondary SAN:
+
+- MUST NOT be under the manufacturer-controlled domain  
+- SHOULD be controlled by an independent or long-term stable domain  
+- MUST use the same fingerprint-derived identifier  
+
+#### 5.4.1 Rationale
+
+The optional secondary SAN enables:
+
+- long-term accessibility of trust anchors  
+- resilience against:
+  - company closure  
+  - domain loss  
+  - acquisition or restructuring  
+
+#### 5.4.2 Constraints
+
+The following constraints apply:
+
+- maximum of two SAN DNS entries  
+- exactly one primary SAN (manufacturer domain)  
+- at most one secondary SAN (external domain)  
+- both SAN entries MUST refer to the same public key identity  
+
+---
+
+## 6. Timestamp Requirements
+
+### 6.1 Mandatory Timestamp
+
+All signed objects MUST have:
+
+- at least one RFC 3161 timestamp  
+
+---
+
+### 6.2 Dual Timestamping
+
+Implementations SHOULD use:
+
+- at least two independent TSAs  
+
+---
+
+### 6.3 Binding
+
+```text
+timestamp.messageImprint = SHA-256(signature)
+```
+
+---
+
+### 6.4 Validity Constraint
+
+```text
+timestamp ∈ [certificate.notBefore, certificate.notAfter]
+```
+
+---
+
+## 7. Transparency Requirements (Sigsum)
+
+### 7.1 Mandatory Use
+
+Sigsum MUST be used for transparency.
+
+---
+
+### 7.2 Objects to Log
+
+The following MUST be logged:
+
+- short-lived signing certificates  
+- TEA collections  
+- TEA artifacts requiring independent authenticity  
+
+---
+
+### 7.3 Witness Requirements
+
+Implementations MUST require:
+
+- multiple independent witnesses  
+
+Minimum:
+
+- 2 witnesses  
+
+Recommended:
+
+- 3+ witnesses  
+
+---
+
+### 7.4 Witness Verification
+
+Consumers MUST verify:
+
+- witness signatures  
+- consistency of checkpoints  
+
+---
+
+### 7.5 Binding
+
+Sigsum entries MUST correspond to:
+
+```text
+SHA-256(signature)
+```
+
+or:
+
+```text
+SHA-256(timestamped_signature)
+```
+
+---
+
+### 7.6 Offline Verification
+
+Evidence MUST allow:
+
+- offline verification of inclusion proofs  
+- verification of cosigned checkpoints  
+
+---
+
+## 8. Evidence Bundle Requirements
+
+Each TEA artifact MUST have:
+
+- exactly one evidence bundle  
+
+The bundle MUST include:
+
+- signature  
+- certificate  
+- timestamp(s)  
+- Sigsum inclusion proof  
+- cosigned checkpoint  
+- witness signatures  
+
+---
+
+## 9. Evidence Binding Requirements
+
+Evidence MUST be bound as:
+
+```text
+artifact → signature → timestamp → transparency
+```
+
+Consumers MUST verify:
+
+- binding consistency  
+- digest matching  
+
+---
+
+## 10. Publication Requirements
+
+### 10.1 Commit Control
+
+Publication MUST:
+
+- require human approval  
+- require strong authentication (MFA)  
+
+---
+
+### 10.2 Commit Validation
+
+The commit step MUST:
+
+- validate all evidence  
+- enforce profile compliance  
+- reject incomplete data  
+
+---
+
+### 10.3 CI/CD Constraints
+
+CI/CD:
+
+- MAY prepare releases  
+- MUST NOT publish releases  
+
+---
+
+## 11. Consumer Validation Requirements
 
 Consumers MUST:
 
-1. compute SHA-256(public key)  
-2. verify SAN matches `<fingerprint>.<domain>`  
+1. verify signature  
+2. validate certificate  
+3. validate timestamp  
+4. verify Sigsum inclusion  
+5. verify witness signatures  
+6. verify binding  
+7. enforce policy  
 
 ---
 
-### 10.3 DNS Validation
+## 12. Trust Anchors
 
-Consumers MUST:
+Trust anchors include:
 
-- resolve certificate from DNS  
-- compare with provided certificate  
-- validate DNSSEC  
+- TEA DNS-published certificates (TEA-native)  
+- WebPKI roots (if applicable)  
+- Sigsum log public keys  
+- Sigsum witness public keys  
 
----
+Implementations MUST define:
 
-## 11. Failure Handling
-
----
-
-### 11.1 Hard Failures (MUST Reject)
-
-- invalid signature  
-- missing required signature  
-- missing timestamp  
-- invalid timestamp  
-- certificate invalid at timestamp  
-- missing transparency inclusion  
-- DNSSEC validation failure (TEA-native)  
-- CAA violation (WebPKI)  
+- accepted logs  
+- accepted witnesses  
+- quorum policy  
 
 ---
 
-### 11.2 No Partial Validation
+## 13. Failure Handling
 
-> Partial validation MUST be treated as failure.
+Validation MUST fail if:
 
----
-
-## 12. Security Enhancements
-
----
-
-### 12.1 Ephemeral Key Enforcement
-
-- keys MUST be short-lived  
-- keys MUST NOT be reused  
-- keys MUST be destroyed after use  
+- any required evidence is missing  
+- any binding mismatch occurs  
+- witness quorum is not satisfied  
+- timestamp validation fails  
+- certificate validation fails  
 
 ---
 
-### 12.2 Audit Logging
+## 14. Security Considerations
 
-Systems MUST log:
+### 14.1 Key Exposure
 
-- validation results  
-- trust anchors used  
-- timestamps  
-- transparency verification  
-- DNS/DNSSEC status  
-- approval events  
+Short-lived keys reduce:
+
+- compromise impact  
+- revocation complexity  
 
 ---
 
-## 13. Security Guarantees
+### 14.2 Log Integrity
 
-When this profile is followed, TEA provides:
+Witnesses prevent:
 
-- strong resistance to tampering  
-- detection of unauthorized publication  
-- long-term verifiability  
-- audit-ready evidence  
-- reduced reliance on centralized trust  
+- split-view attacks  
+- silent log rewriting  
 
 ---
 
-## 14. Limitations
+### 14.3 Long-Term Validation
 
-Residual risks include:
+Preserved evidence ensures:
 
-- CA compromise (WebPKI)  
-- DNS infrastructure compromise  
-- TSA compromise  
-- transparency operator trust  
-
-These risks are mitigated but not eliminated.
+- future verification  
+- auditability  
 
 ---
 
-## 15. Summary
+## 15. Final Statement
 
-The High Assurance Profile strengthens TEA by:
+This profile enforces a **high-assurance trust model** where:
 
-- requiring multiple independent trust anchors  
-- enforcing timestamp and transparency validation  
-- mandating DNSSEC in TEA-native deployments  
-- enforcing strict publication controls  
-- ensuring long-term evidence retention  
+- trust is derived from independent evidence sources  
+- validation is deterministic and reproducible  
+- publication is controlled and auditable  
 
 ---
 
-## 16. One-Line Takeaway
+### Key Principle
 
-> **High assurance in TEA is achieved by combining multiple independent trust anchors and preserving verifiable evidence for long-term validation.**
-
----
+> High assurance is achieved by requiring consistency across independent systems, not by trusting any single authority.
