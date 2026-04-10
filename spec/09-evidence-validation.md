@@ -1,440 +1,470 @@
 # 📘 TEA Evidence Validation Specification
 **Version:** 1.0  
-**Status:** Draft (Implementation-Ready)
+**Status:** Draft (Normative, Implementation-Ready)
+
+---
+
+# Table of Contents
+
+1. [Introduction](#1-introduction)  
+2. [Purpose](#2-purpose)  
+3. [Scope](#3-scope)  
+4. [Core Principle](#4-core-principle)  
+5. [Validation Model](#5-validation-model)  
+6. [Validation Steps](#6-validation-steps)  
+7. [Binding Requirements](#7-binding-requirements)  
+8. [Certificate Validation](#8-certificate-validation)  
+9. [Timestamp Validation](#9-timestamp-validation)  
+10. [Transparency Validation](#10-transparency-validation)  
+11. [Digest and Canonicalization](#11-digest-and-canonicalization)  
+12. [Policy Application](#12-policy-application)  
+13. [Error Handling](#13-error-handling)  
+14. [Offline Validation](#14-offline-validation)  
+15. [Relationship to TEA Collections](#15-relationship-to-tea-collections)  
+16. [Security Considerations](#16-security-considerations)  
+17. [Final Statement](#final-statement)  
 
 ---
 
 # 1. Introduction
 
-This document defines how a TEA Evidence Bundle MUST be validated.
+This document defines how TEA evidence bundles are validated.
 
 It specifies:
 
-- the validation sequence  
-- binding verification rules  
-- trust evaluation points  
-- failure handling  
-
-This document is **normative** for any TEA consumer implementing:
-
-> **TEA with the Trust Architecture**
+- validation steps  
+- binding requirements  
+- failure conditions  
+- policy interaction  
 
 ---
 
-## 1.1 Relationship to Other Specifications
+# 2. Purpose
 
-This document depends on:
+The TEA validation model ensures:
 
-- TEA Evidence Bundle Specification  
-- TEA Trust Architecture Core Specification  
-- TEA Validation Policy  
+- artifact authenticity  
+- integrity  
+- verifiable signing time  
+- public visibility  
 
----
+independent of:
 
-## 1.2 Validation vs Trust
-
-This specification distinguishes between:
-
-### Evidence Verification
-Cryptographic validation of:
-
-- signatures  
-- timestamps  
-- transparency evidence  
-
-### Trust Evaluation
-Policy decisions about:
-
-- trusted certificate authorities  
-- trusted TSAs  
-- trusted transparency logs  
-
-> A bundle can be **valid but not trusted**.
+- certificate lifetime  
+- key persistence  
+- service availability  
 
 ---
 
-# 2. Validation Model Overview
+# 3. Scope
 
-Validation proceeds through a strict chain:
+This specification applies to:
+
+- validation of TEA evidence bundles  
+- validation of TEA artifacts using evidence bundles  
+
+It does not define:
+
+- trust policy decisions  
+- trust anchor selection  
+
+---
+
+# 4. Core Principle
+
+Validation in TEA MUST be performed using an **evidence bundle**.
+
+> Signatures MUST NOT be treated as standalone trust objects.
+
+All validation operations MUST be based on:
+
+- the evidence bundle  
+- the artifact referenced by the bundle  
+
+---
+
+# 5. Validation Model
+
+The validation model is:
 
 ```text
-TEA object → signature → certificate → timestamp → transparency
+artifact ↔ evidence bundle
+              ├─ signature
+              ├─ certificate
+              ├─ timestamp(s)
+              └─ transparency evidence
 ```
 
-Each step MUST:
-
-- succeed independently  
-- bind to the same cryptographic object  
+All components MUST refer to the same cryptographic object.
 
 ---
 
-## 2.1 Core Principle
+# 6. Validation Steps
 
-> Partial validation is equivalent to validation failure.
-
----
-
-## 2.2 Validation Modes
-
-Validation MAY operate in:
-
-- **online mode** (external checks allowed)  
-- **offline mode** (bundle-only validation)  
-
-Implementations MUST support offline validation.
+A verifier MUST perform the following steps:
 
 ---
 
-# 3. Inputs
+## 6.1 Verify Artifact Digest
 
-A validator requires:
-
-- TEA object (external or embedded)  
-- TEA Evidence Bundle  
-- validation policy (L1/L2/L3 or equivalent)  
+- Compute SHA-256 over the artifact  
+- Compare with bundle `object.digest`  
 
 ---
 
-# 4. Validation Steps (Normative)
+## 6.2 Verify Signature
 
-## Step 1 — Object Integrity
-
-The validator MUST:
-
-1. compute digest of TEA object  
-2. compare with `bundle.object.digest`  
-
-Failure → MUST reject  
+- Verify the signature over the artifact  
+- Use the public key from the certificate  
 
 ---
 
-## Step 2 — Signature Verification
+## 6.3 Validate Certificate
 
-The validator MUST:
-
-1. extract signature  
-2. verify signature against object  
-3. use public key from certificate  
-
-Failure → MUST reject  
+- Validate certificate structure  
+- Verify signature chain if present  
+- Confirm certificate matches the signing key  
 
 ---
 
-## Step 3 — Certificate Validation
+## 6.4 Validate Timestamp
 
-### 3.1 General
-
-The validator MUST:
-
-- parse certificate  
-- verify it matches TEA certificate profile  
+- Verify timestamp token validity  
+- Verify timestamp signature  
+- Verify timestamp trust anchor  
 
 ---
 
-### 3.2 TEA-Native
+## 6.5 Verify Timestamp Binding
 
-Validator MUST:
-
-- compute SHA-256(public key)  
-- verify SAN format:
-
-```text
-<fingerprint>.<trust-domain>
 ```
-
-- confirm fingerprint match  
-
-Failure → MUST reject  
-
----
-
-### 3.3 WebPKI
-
-Validator MUST:
-
-- validate PKIX chain  
-- verify chain to trusted root  
-
----
-
-### 3.4 Certificate Validity
-
-Validator MUST verify:
-
-- certificate was valid at timestamp  
-
----
-
-## Step 4 — Timestamp Validation
-
-### 4.1 Presence
-
-For TEA with the trust architecture:
-
-- timestamp MUST be present  
-
----
-
-### 4.2 Cryptographic Validation
-
-Validator MUST:
-
-- verify TSA signature  
-- validate TSA certificate chain  
-
----
-
-### 4.3 Binding Verification
-
-Validator MUST verify:
-
-```text
-timestamp.messageImprint == hash(signature)
-```
-
-Failure → MUST reject  
-
----
-
-### 4.4 Time Consistency
-
-Validator MUST verify:
-
-```text
-timestamp.time ∈ certificate validity window
+messageImprint == SHA-256(signature)
 ```
 
 ---
 
-### 4.5 Trust Evaluation
+## 6.6 Validate Transparency Evidence
 
-Validator MUST:
-
-- trust TSA according to policy  
-
----
-
-## Step 5 — Transparency Validation
-
-### 5.1 Presence
-
-- REQUIRED in high-assurance profiles  
-- OPTIONAL otherwise  
+- Verify inclusion proof  
+- Verify log signatures  
+- Verify consistency proofs (if applicable)  
 
 ---
 
-### 5.2 Cryptographic Validation
+## 6.7 Verify Transparency Binding
 
-Validator MUST verify:
+Transparency MUST bind to:
 
-- inclusion proof  
-- log signature or receipt  
-
----
-
-### 5.3 Binding Verification
-
-Validator MUST verify:
-
-- transparency binds to signature or timestamped signature  
+- signature  
+OR  
+- timestamped signature  
 
 ---
 
-### 5.4 Log Trust
+## 6.8 Apply Policy
 
-Validator MUST:
+Apply local policy decisions:
 
-- validate log public key  
-- apply trust policy  
-
----
-
-## Step 6 — Evidence Consistency
-
-Validator MUST ensure:
-
-- all evidence refers to the same signature  
-- no conflicting digests exist  
-
-Failure → MUST reject  
-
----
-
-## Step 7 — Policy Evaluation
-
-After cryptographic validation:
-
-Validator MUST apply policy:
-
-- validation level (L1/L2/L3)  
 - trust anchors  
-- allowed algorithms  
+- required evidence types  
+- acceptance criteria  
 
 ---
 
-# 5. Offline Validation Requirements
+## 6.9 Final Decision
 
-A validator MUST be able to validate using only:
-
-- bundle contents  
-- local trust store  
+Validation succeeds only if all required checks pass.
 
 ---
 
-## 5.1 Required Bundle Content
+# 7. Binding Requirements
 
-Bundles SHOULD include:
-
-- certificate  
-- timestamp token  
-- transparency evidence  
-- verification material  
+All evidence MUST refer to the same cryptographic object.
 
 ---
 
-# 6. Trust Model Handling
+## 7.1 Artifact Binding
 
-## 6.1 TEA-Native
-
-Validator MUST:
-
-- validate fingerprint-derived SAN  
-- treat DNS as publication mechanism  
-- optionally validate DNSSEC  
+- Signature MUST verify the artifact  
 
 ---
 
-## 6.2 WebPKI
+## 7.2 Timestamp Binding
 
-Validator MUST:
-
-- validate PKIX chain  
-- ignore DNS CERT as trust anchor  
-
-Validator SHOULD:
-
-- validate CAA  
+- Timestamp MUST bind to signature  
 
 ---
 
-# 7. Failure Handling
+## 7.3 Transparency Binding
 
-## 7.1 Hard Failures (MUST Reject)
+- Transparency MUST bind to signature or timestamp  
 
-- invalid signature  
-- missing signature  
-- certificate mismatch  
+---
+
+## 7.4 Consistency Rule
+
+> Any mismatch between layers MUST result in validation failure.
+
+---
+
+# 8. Certificate Validation
+
+Certificate validation MUST ensure:
+
+- correct signature algorithm  
+- valid structure  
+- consistency with signing key  
+
+---
+
+## 8.1 Time Consistency
+
+The timestamp MUST satisfy:
+
+```
+timestamp ∈ [certificate.notBefore, certificate.notAfter]
+```
+
+---
+
+## 8.2 Trust Anchors
+
+Trust anchors may be:
+
+- DNS (TAPS model)  
+- WebPKI  
+- other policy-defined anchors  
+
+---
+
+# 9. Timestamp Validation
+
+Timestamp validation MUST ensure:
+
+- valid signature  
+- trusted TSA  
+- correct message imprint  
+
+---
+
+## 9.1 Role of Timestamp
+
+The timestamp provides:
+
+- proof of signing time  
+- independence from certificate lifetime  
+
+---
+
+## 9.2 Multiple Timestamps
+
+If multiple timestamps are present:
+
+- verifier SHOULD check consistency  
+- policy MAY require agreement  
+
+---
+
+# 10. Transparency Validation
+
+Transparency validation MUST ensure:
+
+- inclusion in log  
+- correct binding  
+- valid log signatures  
+
+---
+
+## 10.1 Supported Systems
+
+Examples:
+
+- Rekor  
+- Sigsum  
+- SCITT  
+
+---
+
+## 10.2 Purpose
+
+Transparency provides:
+
+- auditability  
+- tamper detection  
+- public visibility  
+
+---
+
+# 11. Digest and Canonicalization
+
+## 11.1 Digest Algorithm
+
+TEA defines a single digest algorithm:
+
+- `sha-256`
+
+---
+
+## 11.2 Requirements
+
+- All digests MUST use SHA-256  
+- No other algorithms are permitted  
+
+---
+
+## 11.3 Canonicalization
+
+JSON objects MUST be canonicalized using:
+
+> RFC 8785 — JSON Canonicalization Scheme (JCS)
+
+---
+
+## 11.4 Digest Computation
+
+```
+digest = SHA-256(JCS(object))
+```
+
+---
+
+## 11.5 Encoding
+
+Digest values MUST use base64url encoding.
+
+---
+
+# 12. Policy Application
+
+This specification separates:
+
+- **validation (objective)**  
+- **trust decision (policy)**  
+
+---
+
+## 12.1 Examples of Policy Decisions
+
+- acceptable trust anchors  
+- required transparency systems  
+- timestamp requirements  
+- certificate constraints  
+
+---
+
+# 13. Error Handling
+
+Validation MUST fail if:
+
+- artifact digest mismatch  
+- signature invalid  
+- certificate invalid  
 - timestamp invalid  
-- binding mismatch  
+- transparency invalid  
+- binding inconsistency  
 
 ---
 
-## 7.2 Conditional Failures
+## 13.1 Fail-Closed Requirement
 
-Handled according to policy:
-
-| Condition | L1 | L2 | L3 |
-|----------|----|----|----|
-| Missing timestamp | OK | warn | fail |
-| Missing transparency | OK | warn | fail |
-| DNSSEC failure | OK | warn | fail |
-| CAA violation | OK | SHOULD fail | MUST fail |
+> Implementations MUST fail closed.
 
 ---
 
-## 7.3 Logging Requirements
+# 14. Offline Validation
 
-Validators SHOULD log:
+Evidence bundles SHOULD enable offline validation.
 
-- validation result  
-- failed steps  
-- timestamp status  
-- transparency status  
-- trust decisions  
+This requires:
 
----
-
-# 8. Security Considerations
-
-## 8.1 Timestamp as Core Anchor
-
-Timestamp enables:
-
-- validation after certificate expiry  
-- protection against backdating  
+- embedded certificate  
+- embedded timestamps  
+- embedded transparency evidence  
 
 ---
 
-## 8.2 Transparency Limitations
+# 15. Relationship to TEA Collections
 
-Transparency:
-
-- does NOT prevent attacks  
-- enables detection  
+Evidence validation and collection validation are separate concerns.
 
 ---
 
-## 8.3 Critical Risk
+## 15.1 Evidence Bundle
 
-> Valid signature + invalid authorization
+Answers:
 
-Validation MUST NOT imply authorization.
-
----
-
-## 8.4 Replay Protection
-
-Timestamp + transparency mitigate:
-
-- replay of stale signatures  
+> “Is this artifact authentic and verifiable?”
 
 ---
 
-# 9. Implementation Guidance
+## 15.2 Collection
 
-## 9.1 Recommended Order
+Answers:
 
-Implementations SHOULD follow strict step order.
+> “Does this artifact belong to this release?”
 
 ---
 
-## 9.2 Caching
+## 15.3 Rule
 
-Validators MAY cache:
+Artifact validation MUST NOT depend on a collection.
 
-- certificates  
+---
+
+# 16. Security Considerations
+
+---
+
+## 16.1 Short-Lived Certificates
+
+Certificates are intentionally short-lived.
+
+Long-term validation relies on:
+
 - timestamps  
-- transparency proofs  
-
-But MUST NOT skip validation.
+- preserved evidence  
 
 ---
 
-## 9.3 Parallel Validation
+## 16.2 No Implicit Trust
 
-Timestamp and transparency MAY be validated in parallel.
+Evidence bundles do not establish trust automatically.
 
----
-
-# 10. Key Principles
-
-1. Evidence must be cryptographically verifiable  
-2. Evidence must be consistently bound  
-3. Trust is policy-driven  
-4. Partial validation is failure  
+Policy decisions are required.
 
 ---
 
-# 11. Final Statement
+## 16.3 Binding Integrity
 
-The TEA Evidence Validation model ensures that:
+All trust depends on correct binding between:
 
-- signatures remain verifiable after certificate expiry  
-- validation can be performed offline  
-- trust is derived from evidence, not infrastructure  
+- artifact  
+- signature  
+- timestamp  
+- transparency  
 
-It operationalizes the TEA trust architecture by transforming:
+---
 
-> stored evidence  
-into  
-> verifiable trust decisions
+## 16.4 Attack Surface
+
+Primary risks:
+
+- substitution attacks  
+- replay attacks  
+- binding mismatches  
+
+All are mitigated by strict validation rules.
+
+---
+
+# Final Statement
+
+TEA validation is based on:
+
+> consistent, verifiable evidence across independent trust signals  
+
+---
+
+## Key Principle
+
+> Validation succeeds only when all evidence layers agree on the same cryptographic object.
