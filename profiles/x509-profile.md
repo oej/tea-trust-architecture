@@ -23,19 +23,23 @@ The key words **MUST**, **SHOULD**, and **MAY** are to be interpreted as describ
 2. [Scope](#2-scope)  
 3. [Design Principles](#3-design-principles)  
 4. [Identity Model](#4-identity-model)  
-5. [Certificate Roles](#5-certificate-roles)  
-6. [Profile Requirements](#6-profile-requirements)  
-7. [Subject Name Requirements](#7-subject-name-requirements)  
-8. [SAN Requirements](#8-san-requirements)  
-9. [Key Usage and Extensions](#9-key-usage-and-extensions)  
-10. [Algorithms](#10-algorithms)  
-11. [Validity Period](#11-validity-period)  
-12. [Encoding and Publication](#12-encoding-and-publication)  
-13. [Validation Rules](#13-validation-rules)  
-14. [DNS and Policy Considerations](#14-dns-and-policy-considerations)  
-15. [Security Considerations](#15-security-considerations)  
-16. [Examples](#16-examples)  
-17. [Final Statement](#17-final-statement)  
+5. [Terminology Clarification](#5-terminology-clarification)  
+6. [Certificate Roles](#6-certificate-roles)  
+7. [Profile Requirements](#7-profile-requirements)  
+8. [Subject Name Requirements](#8-subject-name-requirements)  
+9. [SAN Requirements](#9-san-requirements)  
+10. [Key Usage and Extensions](#10-key-usage-and-extensions)  
+11. [Algorithms](#11-algorithms)  
+12. [Validity Period](#12-validity-period)  
+13. [Key Reuse Prohibition](#13-key-reuse-prohibition)  
+14. [Encoding and Publication](#14-encoding-and-publication)  
+15. [Validation Rules](#15-validation-rules)  
+16. [DNS and Policy Considerations](#16-dns-and-policy-considerations)  
+17. [Security Considerations](#17-security-considerations)  
+18. [Examples](#18-examples)  
+19. [Normative References](#19-normative-references)  
+20. [Informative References](#20-informative-references)  
+21. [Final Statement](#21-final-statement)  
 
 ---
 
@@ -43,43 +47,40 @@ The key words **MUST**, **SHOULD**, and **MAY** are to be interpreted as describ
 
 This document defines how X.509 certificates are used in the TEA Trust Architecture.
 
-The profile is designed to support:
+The profile supports:
 
-- short-lived signing certificates  
-- public-key-centric identity  
-- DNS-based publication in TEA-native mode  
-- long-term validation using timestamps and transparency evidence  
-
-This profile does **not** use X.509 subject naming as the source of trust identity.
+- short-lived certificates  
+- ephemeral signing keys  
+- DNS-based trust anchor publication (TAPS)  
+- long-term validation via timestamps and transparency  
 
 ---
 
 ## 2. Scope
 
-This profile applies to X.509 certificates used for:
+This profile applies to certificates containing public keys used for:
 
 - TEA artifact signing  
 - TEA collection signing  
-- discovery signing  
-- publication of TEA-native trust anchors in DNS  
+- discovery document signing  
+- TEA-native trust anchor publication  
 
-This profile applies to both:
+Applicable to:
 
-- **TEA-native trust model**
-- **WebPKI trust model (with TEA overlay)**
+- TEA-native trust model  
+- WebPKI trust model (with TEA overlay)  
 
 ---
 
 ## 3. Design Principles
 
-The TEA X.509 profile is based on the following principles:
-
 1. **Public key is the identity**  
-2. **Certificate is a short-lived wrapper, not the root identity**  
-3. **Trust must not depend on long-lived private keys**  
-4. **DNS publication must bind clearly to the same key identity**  
-5. **Long-term validation depends on evidence, not certificate lifetime**  
-6. **A single key pair is reused across signing and transparency systems**  
+2. **Private key performs signing**  
+3. **Certificate is a short-lived wrapper**  
+4. **Trust derives from evidence, not key lifetime**  
+5. **Keys are ephemeral and single-use**  
+6. **DNS binds identity in TEA-native deployments**  
+7. **One key MAY be reused across systems (e.g., transparency), but not across time**  
 
 ---
 
@@ -87,46 +88,58 @@ The TEA X.509 profile is based on the following principles:
 
 In TEA:
 
-> **The public key is the identity.**
+> The public key is the identity.
 
-The certificate provides:
-
-- a validity window  
-- a standard container format  
-- accountability metadata  
-- interoperability with timestamp and transparency ecosystems  
-
-The certificate subject is **not** the trust identity.
-
-The trust identity is derived from:
+The identity is derived from:
 
 ```text
 SHA-256(public key)
 ```
 
+[RFC 6234]
+
+The certificate:
+
+- provides a validity window  
+- provides metadata  
+- binds identity to DNS via SAN  
+
+It is **not** the root of trust.
+
 ---
 
-## 5. Certificate Roles
+## 5. Terminology Clarification
 
-Certificates in TEA may be used for:
+- Signing is performed using the **private key**  
+- The certificate contains the corresponding **public key**  
+- The certificate does **not** perform cryptographic operations  
 
+All references to signing MUST be interpreted as:
+
+> signing with the private key corresponding to the public key in the certificate  
+
+---
+
+## 6. Certificate Roles
+
+Certificates bind public keys used for:
+
+- artifact signing  
+- collection signing  
 - discovery signing  
-- TEA collection signing  
-- TEA artifact signing  
-- TEA trust anchor publication (TAPS)  
 
-All roles use the same core profile.
+The corresponding private key performs the actual signing.
 
 ---
 
-## 6. Profile Requirements
+## 7. Profile Requirements
 
 Certificates MUST:
 
-- be X.509 v3  
-- contain an Ed25519 public key  
+- be X.509 v3 [RFC 5280]  
+- contain an Ed25519 public key [RFC 8410]  
 - be short-lived  
-- include SAN DNS entries as defined in this profile  
+- include SAN DNS entries  
 
 Certificates MUST NOT:
 
@@ -135,210 +148,221 @@ Certificates MUST NOT:
 
 ---
 
-## 7. Subject Name Requirements
+## 8. Subject Name Requirements
 
-The subject field:
+The subject:
 
-- MAY contain:
+- MAY include:
   - O (organization)  
   - OU (organizational unit)  
   - C (country)  
 
-- MUST NOT be used as a trust anchor  
-- MUST NOT be relied upon for identity validation  
+- MUST NOT be used for trust decisions  
 
-The CN field:
+CN:
 
 - SHOULD NOT be used  
-- MUST be ignored by consumers  
+- MUST be ignored  
 
 ---
 
-## 8. SAN Requirements
+## 9. SAN Requirements
 
-### 8.1 Primary SAN
-
-Certificates MUST contain:
-
-- exactly one **primary SAN DNS entry**
-
-The primary SAN:
-
-- MUST be under the manufacturer-controlled domain  
-- MUST encode the fingerprint-derived identifier  
-
-Example:
-
-```text
-<fingerprint>.tea.example.com
-```
-
----
-
-### 8.2 Optional Secondary SAN (Long-Term)
-
-Certificates MAY include:
-
-- one **secondary SAN DNS entry**
-
-The secondary SAN:
-
-- MAY be under:
-  - the manufacturer-controlled domain, OR  
-  - an independent domain  
-
-- MUST encode the same fingerprint-derived identifier  
-
-When the secondary SAN is under the manufacturer-controlled domain:
-
-- it SHOULD use a **separate domain or subdomain**  
-- it SHOULD be operated under **separate infrastructure and control boundaries**  
-
----
-
-### 8.3 Constraints
-
-- maximum of two SAN DNS entries  
-- exactly one primary SAN  
-- at most one secondary SAN  
-- both SANs MUST refer to the same public key identity  
-
----
-
-## 9. Key Usage and Extensions
+### 9.1 Primary SAN
 
 Certificates MUST include:
 
-- digitalSignature key usage  
+- exactly one primary SAN DNS entry  
 
-No other key usages are required.
+The SAN extension is defined in:
+
+- RFC 5280  
+
+The primary SAN:
+
+- MUST be under manufacturer-controlled domain  
+- MUST encode fingerprint-derived identity  
 
 ---
 
-## 10. Algorithms
+### 9.2 Optional Secondary SAN
 
-### 10.1 Allowed Algorithm
+Certificates MAY include:
 
-TEA certificates MUST use:
+- one secondary SAN DNS entry  
+
+The secondary SAN:
+
+- MUST encode the same identity  
+- SHOULD be on separate infrastructure if under same organization  
+
+---
+
+## 10. Key Usage and Extensions
+
+Certificates MUST include:
+
+- digitalSignature  
+
+As defined in:
+
+- RFC 5280  
+
+---
+
+## 11. Algorithms
+
+### 11.1 Allowed Algorithm
 
 ```text
 Ed25519
 ```
 
-No other algorithms are permitted.
+Defined in:
+
+- RFC 8032  
+- RFC 8410 (X.509 usage)  
 
 ---
 
-### 10.2 Rationale
-
-This restriction ensures:
-
-- compatibility with Sigsum transparency logs  
-- consistent key identity across systems  
-- simplified validation logic  
-- reduced implementation complexity  
-- avoidance of algorithm downgrade risks  
-
----
-
-### 10.3 Key Reuse Across Systems
-
-The same Ed25519 key pair:
-
-- MUST be used for TEA signing  
-- MUST be used for Sigsum transparency logging  
-
-This ensures:
-
-- a single cryptographic identity  
-- consistent evidence binding  
-- simplified trust validation  
-
----
-
-## 11. Validity Period
-
-Certificates MUST:
-
-- have a lifetime ≤ 1 hour  
-
----
-
-## 12. Encoding and Publication
-
-Certificates MUST:
-
-- be encoded in DER  
-
-For TEA-native:
-
-- MUST be published in DNS using CERT records  
-
-For WebPKI:
-
-- follow standard CA issuance  
-
----
-
-## 13. Validation Rules
-
-Consumers MUST:
-
-- validate certificate signature  
-- validate certificate time bounds  
-- validate binding to timestamp  
-
-Consumers MUST NOT:
-
-- rely solely on certificate validity  
-
----
-
-## 14. DNS and Policy Considerations
-
-### 14.1 TEA-Native
-
-- DNS is a trust anchor distribution mechanism  
-- DNSSEC SHOULD be used  
-
----
-
-### 14.2 WebPKI
-
-- DNS is NOT a trust anchor  
-- DNS MAY enforce policy via CAA records  
-- DNSSEC strengthens CAA validation  
-
----
-
-## 15. Security Considerations
-
-- short-lived certs reduce exposure  
-- Ed25519 reduces complexity and attack surface  
-- single key identity simplifies validation  
-- dual SAN improves survivability  
-
----
-
-## 16. Examples
+### 11.2 Hash Algorithm
 
 ```text
-Primary:  abcd1234.tea.example.com
-Secondary: abcd1234.backup.example.net
+SHA-256
+```
+
+Defined in:
+
+- RFC 6234  
+
+---
+
+### 11.3 Transparency Compatibility
+
+The same key MAY be used with:
+
+- Sigsum (recommended)  
+- Rekor (allowed)  
+
+---
+
+## 12. Validity Period
+
+Certificates MUST:
+
+```text
+have a lifetime ≤ 1 hour
 ```
 
 ---
 
-## 17. Final Statement
+## 13. Key Reuse Prohibition
+
+### 13.1 Requirement
+
+A key pair MUST be single-use.
+
+---
+
+### 13.2 Fingerprint
+
+```text
+SHA-256(public key)
+```
+
+MUST be unique.
+
+---
+
+## 14. Encoding and Publication
+
+Certificates MUST:
+
+- be DER encoded [RFC 5280]  
+
+### TEA-native
+
+Certificates MUST be published in DNS using:
+
+- CERT records [RFC 4398]  
+
+---
+
+## 15. Validation Rules
+
+Consumers MUST:
+
+- validate certificate structure [RFC 5280]  
+- verify validity period  
+- verify public key matches signature  
+
+---
+
+## 16. DNS and Policy Considerations
+
+### 16.1 TEA-native
+
+- DNSSEC SHOULD be used [RFC 4033, RFC 4034, RFC 4035]  
+
+---
+
+### 16.2 WebPKI
+
+- DNS MAY enforce CA policy using:
+  - CAA records [RFC 8659]  
+
+---
+
+## 17. Security Considerations
+
+- short-lived certificates reduce exposure  
+- ephemeral keys eliminate long-term risk  
+- Ed25519 simplifies cryptography  
+- DNSSEC strengthens trust anchor distribution  
+
+---
+
+## 18. Examples
+
+```text
+abcd1234.tea.example.com
+abcd1234.backup.example.net
+```
+
+---
+
+## 19. Normative References
+
+- RFC 2119 — Key words for use in RFCs  
+- RFC 8174 — Updates to RFC 2119  
+- RFC 5280 — PKIX Certificate and CRL Profile  
+- RFC 8032 — EdDSA (Ed25519)  
+- RFC 8410 — Ed25519 in X.509  
+- RFC 6234 — SHA-256  
+- RFC 3161 — Time-Stamp Protocol  
+
+---
+
+## 20. Informative References
+
+- RFC 4033 — DNSSEC Introduction  
+- RFC 4034 — DNSSEC Resource Records  
+- RFC 4035 — DNSSEC Protocol  
+- RFC 4398 — Storing Certificates in DNS  
+- RFC 8659 — Certification Authority Authorization (CAA)  
+
+---
+
+## 21. Final Statement
 
 This profile enforces:
 
-- a single cryptographic identity model  
-- strong alignment with transparency systems  
-- simplified and robust validation  
+- ephemeral identity  
+- deterministic validation  
+- long-term trust via evidence  
 
 ---
 
 ### Key Principle
 
-> One key, one identity, one algorithm — verified through independent evidence.
+> One key, one identity, one moment in time — preserved through verifiable evidence.
