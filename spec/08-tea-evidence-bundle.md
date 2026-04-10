@@ -1,157 +1,148 @@
 # 📘 TEA Evidence Bundle Specification
-**Version:** 1.1  
-**Status:** Draft (Implementation-Ready)
+**Version:** 1.0  
+**Status:** Draft (Normative, Implementation-Ready)
 
 ---
 
-## 1. Introduction
+# Table of Contents
 
-The TEA Evidence Bundle defines how cryptographic evidence associated with a signed object is:
-
-- packaged  
-- transported  
-- validated  
-
-It is a **core component of the TEA trust architecture**.
-
-The bundle enables:
-
-- long-term validation of TEA artefacts  
-- offline verification  
-- interoperability between TEA implementations  
-- resilience when keys, certificates, or external services are no longer available  
-
----
-
-## 2. Role in TEA Architecture
-
-The TEA trust architecture separates:
-
-- identity  
-- integrity  
-- time  
-- visibility  
-- authorization  
-
-The Evidence Bundle is the mechanism that **binds these together** for validation.
-
-> The bundle does not create trust — it preserves verifiable evidence.
+1. [Introduction](#1-introduction)  
+2. [Purpose](#2-purpose)  
+3. [Scope](#3-scope)  
+4. [Core Design Principles](#4-core-design-principles)  
+5. [Evidence Model](#5-evidence-model)  
+6. [Bundle Structure](#6-bundle-structure)  
+7. [Object](#7-object)  
+8. [Signature](#8-signature)  
+9. [Certificate](#9-certificate)  
+10. [Timestamps](#10-timestamps)  
+11. [Transparency Evidence](#11-transparency-evidence)  
+12. [Digest Algorithm and Canonicalization](#12-digest-algorithm-and-canonicalization)  
+13. [Binding Rules (Normative)](#13-binding-rules-normative)  
+14. [Validation Model](#14-validation-model)  
+15. [Reuse Rules](#15-reuse-rules)  
+16. [Profiles](#16-profiles)  
+17. [Error Handling](#17-error-handling)  
+18. [Extensibility](#18-extensibility)  
+19. [Rationale](#19-rationale)  
 
 ---
 
-## 3. Purpose
+# 1. Introduction
 
-Modern supply chain security uses:
+The TEA Evidence Bundle defines how cryptographic evidence associated with a signed object is packaged, transported, and validated.
 
-- short-lived keys  
+It is the **primary unit of trust** in the TEA trust architecture.
+
+An evidence bundle encapsulates:
+
+- the digital signature  
+- the signing certificate  
+- timestamp evidence  
+- transparency evidence  
+- optional validation material  
+
+---
+
+# 2. Purpose
+
+Modern software supply chain systems rely on:
+
+- short-lived signing keys  
 - short-lived certificates  
 - distributed trust anchors  
 
-This introduces a fundamental challenge:
+This creates a challenge:
 
-> How can a verifier validate a signature years later?
+> How to validate signatures long after keys and certificates no longer exist.
 
-The TEA Evidence Bundle answers this by preserving:
+The TEA Evidence Bundle preserves:
 
-- what was signed  
-- who signed it (via certificate)  
-- when it was signed (timestamp)  
-- that it was publicly visible (transparency)  
+- proof of what was signed  
+- proof of who signed it  
+- proof of when it was signed  
+- proof of public visibility  
 
 ---
 
-## 4. Scope
+# 3. Scope
 
-A TEA Evidence Bundle applies to **exactly one signed TEA object**.
+An evidence bundle applies to a **single TEA artifact**.
 
 Examples:
 
-- TEA collection (release definition)  
-- TEA artefact (e.g., SBOM)  
-- discovery document  
-- DSSE attestation  
-
-A TEA release typically contains multiple bundles:
-
-- one per TEA collection  
-- one per TEA artefact  
-- one per attestation  
+- SBOM  
+- binary artifact  
+- VEX  
+- attestation  
 
 ---
 
-## 5. Core Design Principles
+## 3.1 Scope Restriction
 
-### 5.1 One Bundle Per Object
+Evidence bundles defined in this specification:
 
-Each bundle corresponds to exactly one signed object.
-
-**Rationale**
-
-- avoids ambiguity  
-- simplifies validation  
-- ensures deterministic verification  
+- MUST refer to TEA artifacts  
+- MUST NOT be reused for:
+  - TEA collections  
+  - discovery documents  
 
 ---
 
-### 5.2 Detached but Bound
+# 4. Core Design Principles
 
-The bundle does NOT replace the original object.
+## 4.1 Atomic Trust Object
 
-- TEA storage → authoritative object  
+The evidence bundle is the **atomic unit of trust**.
+
+All validation MUST be performed using the bundle.
+
+---
+
+## 4.2 Detached but Bound
+
+The bundle does not replace the artifact.
+
+- artifact → authoritative content  
 - bundle → validation evidence  
 
-**Rationale**
-
-Separation allows:
-
-- independent storage  
-- independent transport  
-- reuse of evidence  
-
 ---
 
-### 5.3 Offline Validation
+## 4.3 Offline Validation
 
-Bundles SHOULD contain enough information to validate without:
+Bundles SHOULD contain sufficient information for validation without:
 
-- contacting a TSA  
-- contacting transparency systems  
+- contacting TSA  
+- contacting transparency services  
 - retrieving certificates externally  
 
-**Rationale**
+---
 
-Long-term validation must not depend on:
+## 4.4 No Implicit Trust
 
-- availability of services  
-- persistence of infrastructure  
+The bundle does not establish trust by itself.
+
+Trust decisions require policy evaluation.
 
 ---
 
-### 5.4 No Implicit Trust
+# 5. Evidence Model
 
-The bundle itself does NOT establish trust.
-
-A verifier MUST apply policy to determine:
-
-- which certificates are trusted  
-- which TSAs are trusted  
-- which transparency systems are trusted  
-
----
-
-## 6. Validation Model
-
-The bundle supports the following validation chain:
+The validation chain is:
 
 ```text
-TEA object → signature → certificate → timestamp → transparency
+artifact ↔ evidence bundle
+              ├─ signature
+              ├─ certificate
+              ├─ timestamp(s)
+              └─ transparency evidence
 ```
 
-Each layer MUST refer to the **same cryptographic object**.
+All elements MUST refer to the same cryptographic object.
 
 ---
 
-## 7. Bundle Structure
+# 6. Bundle Structure
 
 ```json
 {
@@ -167,14 +158,12 @@ Each layer MUST refer to the **same cryptographic object**.
 
 ---
 
-## 8. Object
-
-Describes the signed TEA object.
+# 7. Object
 
 ```json
 {
-  "objectType": "tea-collection",
-  "objectId": "collection-123",
+  "objectType": "tea-artifact",
+  "objectId": "artifact-123",
   "digest": {
     "algorithm": "sha-256",
     "value": "BASE64URL..."
@@ -182,14 +171,17 @@ Describes the signed TEA object.
 }
 ```
 
-### Requirements
+---
 
-- digest MUST match the exact bytes used for signing  
-- objectType SHOULD be explicit  
+## 7.1 Rules
+
+- MUST identify the artifact  
+- Digest MUST use SHA-256  
+- Digest MUST match exact artifact bytes  
 
 ---
 
-## 9. Signature
+# 8. Signature
 
 ```json
 {
@@ -203,22 +195,17 @@ Describes the signed TEA object.
 }
 ```
 
-### Why `signatureDigest` Exists
+---
 
-It enables:
+## 8.1 Rules
 
-- timestamp binding  
-- transparency binding  
+- Signature MUST be over the artifact  
+- `signatureDigest` MUST be SHA-256 over the signature value  
+- Signature MUST be verifiable using the certificate  
 
 ---
 
-### Critical Principle
-
-> All external evidence binds to the signature — not directly to the object.
-
----
-
-## 10. Certificate
+# 9. Certificate
 
 ```json
 {
@@ -228,15 +215,17 @@ It enables:
 }
 ```
 
-### Requirements
+---
 
-- MUST be the signing certificate  
-- MUST follow TEA certificate profile  
-- MAY include chain (WebPKI)  
+## 9.1 Rules
+
+- MUST be the certificate used for signing  
+- MUST conform to TEA certificate profile  
+- MAY include chain  
 
 ---
 
-## 11. Timestamps
+# 10. Timestamps
 
 ```json
 [
@@ -253,73 +242,49 @@ It enables:
 
 ---
 
-### 11.1 What a Timestamp Means
+## 10.1 Binding Rule
 
-A timestamp (RFC 3161) is a **signed assertion by a Timestamp Authority (TSA)** that:
-
-> A specific hash existed at a specific time.
-
----
-
-### 11.2 What Is Being Timestamped
-
-In TEA:
-
-```text
-messageImprint == hash(signature)
+```
+messageImprint = SHA-256(signature)
 ```
 
 ---
 
-### 11.3 Why This Matters
+## 10.2 Requirements
 
-Certificates are short-lived.
-
-The timestamp proves:
-
-> The signature existed while the certificate was valid.
+- MUST bind to signature (not artifact)  
+- MUST use SHA-256  
+- MUST prove signature existed within certificate validity  
 
 ---
 
-### 11.4 Trust Model
-
-A verifier MUST:
-
-- validate TSA signature  
-- trust TSA certificate (via trust store)  
-- verify messageImprint  
+# 11. Transparency Evidence
 
 ---
 
-## 12. Transparency Evidence
+## 11.1 Purpose
 
-### 12.1 What Transparency Provides
+Provides:
 
-Transparency logs provide:
-
-- existence proof  
-- ordering  
+- public visibility  
 - auditability  
-
-They DO NOT prevent attacks.
-
-They enable:
-
-> detection, attribution, and response
+- tamper detection  
 
 ---
 
-### 12.2 Multi-System Model
+## 11.2 Binding Rule
 
-Supported systems:
+Transparency MUST bind to:
 
-- Rekor  
-- Sigsum  
-- SCITT  
+- signature  
+OR  
+- timestamped signature  
+
+NOT the raw artifact.
 
 ---
 
-### 12.3 Common Structure
+## 11.3 Common Structure
 
 ```json
 {
@@ -337,141 +302,209 @@ Supported systems:
 
 ---
 
-### 12.4 Binding Rule (Normative)
+# 12. Digest Algorithm and Canonicalization
 
-Transparency MUST bind to:
+## 12.1 Digest Algorithm
 
-- signature  
-OR  
-- timestamped signature  
+TEA defines a single digest algorithm:
 
-MUST NOT bind to:
-
-- raw artefact digest  
+- `sha-256`
 
 ---
 
-### Rationale
+## 12.2 Normative Requirements
 
-Binding to signature ensures:
-
-- alignment with timestamp  
-- consistent identity  
-- resistance to substitution  
+- All digests MUST use SHA-256  
+- No other algorithms are permitted  
+- Implementations MUST support SHA-256  
 
 ---
 
-## 13. Validation Material
+## 12.3 Prohibited Algorithms
 
-Optional but recommended:
-
-- TSA certificates  
-- transparency public keys  
-- certificate digests  
+- MD5  
+- SHA-1  
+- SHA-512  
+- any unspecified algorithm  
 
 ---
 
-## 14. Binding Rules (Normative)
+## 12.4 Canonicalization
+
+JSON objects MUST use:
+
+> RFC 8785 — JSON Canonicalization Scheme (JCS)
+
+---
+
+## 12.5 Digest Computation
+
+```
+digest = SHA-256(JCS(object))
+```
+
+---
+
+## 12.6 Encoding
+
+Digest values MUST use base64url.
+
+---
+
+# 13. Binding Rules (Normative)
 
 A verifier MUST validate:
 
-### 14.1 Object → Signature
-Signature verifies against object.
+---
 
-### 14.2 Signature → Timestamp
+## 13.1 Artifact → Signature
+
+Signature verifies the artifact.
+
+---
+
+## 13.2 Signature → Timestamp
+
 Timestamp binds to signature.
 
-### 14.3 Signature → Transparency
-Transparency binds to signature.
+---
 
-### 14.4 Certificate → Signature
-Certificate validates signature.
+## 13.3 Signature → Transparency
+
+Transparency binds to signature or timestamped signature.
 
 ---
 
-## 15. Short-Lived Certificate Model
+## 13.4 Certificate → Signature
 
-TEA assumes:
-
-- ephemeral keys  
-- certificates ≤ 1 hour  
-
-The bundle compensates by preserving:
-
-- timestamp (time proof)  
-- transparency (visibility proof)  
+Certificate validates the signature.
 
 ---
 
-## 16. Profiles
+## 13.5 Object Consistency
 
-### Minimal
-- signature  
-- certificate  
-
-### TEA with the Trust Architecture
-- timestamp REQUIRED  
-- transparency SHOULD be present  
-
-### High Assurance
-- multiple TSAs  
-- multiple transparency systems  
+All digests MUST refer to the same artifact.
 
 ---
 
-## 17. Validation Procedure
+# 14. Validation Model
 
-1. verify object digest  
+A verifier MUST:
+
+1. verify artifact digest  
 2. verify signature  
 3. validate certificate  
 4. validate timestamp  
 5. verify timestamp binding  
 6. validate transparency  
 7. verify transparency binding  
-8. apply trust policy  
+8. apply policy  
 
 ---
 
-## 18. Error Handling
+## 14.1 Rule
+
+> Validation MUST fail on any mismatch or invalid evidence.
+
+---
+
+# 15. Reuse Rules
+
+---
+
+## 15.1 Allowed Reuse
+
+Evidence bundles MAY be reused:
+
+- across collections  
+- across distribution channels  
+
+---
+
+## 15.2 Conditions
+
+Reuse is allowed only if:
+
+- artifact digest matches  
+- bundle refers to the same artifact  
+
+---
+
+## 15.3 Prohibited Reuse
+
+Evidence bundles MUST NOT be reused for:
+
+- TEA collections  
+- discovery documents  
+
+---
+
+# 16. Profiles
+
+## 16.1 Minimal
+
+- signature  
+- certificate  
+
+---
+
+## 16.2 TEA Trust Architecture
+
+- timestamp REQUIRED  
+- transparency REQUIRED  
+
+---
+
+## 16.3 High Assurance
+
+- multiple TSAs  
+- multiple transparency systems  
+
+---
+
+# 17. Error Handling
 
 Validation MUST fail if:
 
-- binding mismatch  
-- invalid signature  
-- invalid timestamp  
-- invalid transparency evidence  
+- digest mismatch  
+- signature invalid  
+- certificate invalid  
+- timestamp invalid  
+- transparency invalid  
+- binding inconsistency  
 
 ---
 
-## 19. Extensibility
+# 18. Extensibility
 
-Unknown fields MUST be ignored.
-
-Future formats MAY include:
-
-- CBOR  
-- COSE  
-- SCITT-native receipts  
+- unknown fields MUST be ignored  
+- additional evidence types MAY be added  
+- future formats MAY include CBOR / COSE  
 
 ---
 
-## 20. Key Architectural Principle
+# 19. Rationale
 
-> All evidence layers MUST refer to the same cryptographic object (the signature).
+Short-lived certificates and ephemeral keys eliminate long-term key risk but require durable validation evidence.
+
+The evidence bundle provides:
+
+- durable proof of authorship  
+- durable proof of signing time  
+- durable proof of public visibility  
 
 ---
 
-## 21. Final Statement
+# Final Statement
 
-The TEA Evidence Bundle enables:
+The TEA Evidence Bundle transforms:
 
-- short-lived keys  
-- long-term validation  
-- offline verification  
-- multi-system transparency  
-
-It transforms:
-
-> ephemeral trust signals  
+> ephemeral cryptographic signals  
 into  
-> durable, verifiable evidence
+> durable, verifiable evidence  
+
+---
+
+## Key Principle
+
+> All evidence layers MUST refer to the same cryptographic object.
