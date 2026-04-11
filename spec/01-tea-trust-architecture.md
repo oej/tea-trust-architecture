@@ -1,4 +1,4 @@
-# 📘 TEA Trust Architecture – Core Specification
+# 📘 TEA Trust Architecture Core Specification
 **Version:** 1.0  
 **Status:** Draft (Normative, RFC-style)
 
@@ -6,470 +6,556 @@
 
 ## Status
 
-This document defines the **TEA Trust Architecture**, an **optional overlay** to the core TEA specification.
+This document defines the **TEA Trust Architecture**, an optional overlay to the core TEA specification.
 
-The Trust Architecture adds:
+The TEA Trust Architecture introduces:
 
-- cryptographic signatures
-- timestamps
-- transparency logging
-- DNS-based trust anchoring
-- long-term validation mechanisms
+- cryptographic signatures  
+- timestamps  
+- transparency evidence  
+- DNS-based trust anchoring  
+- evidence bundles as first-class trust objects  
 
-It is designed to support:
+It enables:
 
-- **EU Cyber Resilience Act (CRA)** requirements
-- long-term software integrity (≥10 years)
-- offline and audit-friendly validation
+- long-term validation (≥10 years)  
+- offline verification  
+- strong supply chain integrity guarantees  
+
+This document is **normative** for implementations claiming compliance with:
+
+> **“TEA with the trust architecture”**
 
 ---
 
 ## Table of Contents
 
 1. [Introduction](#1-introduction)  
-2. [Scope and Layering](#2-scope-and-layering)  
+2. [Relationship to TEA Core](#2-relationship-to-tea-core)  
 3. [Terminology](#3-terminology)  
 4. [Architecture Overview](#4-architecture-overview)  
 5. [Trust Model](#5-trust-model)  
-6. [Cryptographic Model](#6-cryptographic-model)  
-7. [Evidence Model](#7-evidence-model)  
-8. [Evidence Binding Rules](#8-evidence-binding-rules)  
-9. [Timestamp Model](#9-timestamp-model)  
-10. [Transparency Model](#10-transparency-model)  
-11. [DNS Trust Anchoring (TAPS)](#11-dns-trust-anchoring-taps)  
-12. [Discovery Trust](#12-discovery-trust)  
-13. [Validation Model](#13-validation-model)  
-14. [Publisher Responsibilities](#14-publisher-responsibilities)  
-15. [Consumer Responsibilities](#15-consumer-responsibilities)  
-16. [Security Considerations](#16-security-considerations)  
-17. [Normative References](#17-normative-references)  
-18. [Informative References](#18-informative-references)  
+6. [Evidence Model](#6-evidence-model)  
+7. [Evidence Binding Rules](#7-evidence-binding-rules)  
+8. [Trust Domains](#8-trust-domains)  
+9. [Cryptographic Model](#9-cryptographic-model)  
+10. [Timestamp Model](#10-timestamp-model)  
+11. [Transparency Model](#11-transparency-model)  
+12. [DNS and Trust Anchoring](#12-dns-and-trust-anchoring)  
+13. [Artifact vs Collection Semantics](#13-artifact-vs-collection-semantics)  
+14. [Evidence Reuse Rules](#14-evidence-reuse-rules)  
+15. [Publication Model](#15-publication-model)  
+16. [CI/CD Authentication and Authorization](#16-cicd-authentication-and-authorization)  
+17. [Messaging and Logging Requirements](#17-messaging-and-logging-requirements)  
+18. [Security Properties](#18-security-properties)  
+19. [Implementation Guidance](#19-implementation-guidance)  
+20. [Normative References](#20-normative-references)  
+21. [Informative References](#21-informative-references)  
 
 ---
 
 ## 1. Introduction
 
-The TEA Trust Architecture extends TEA from a **data exchange protocol** into a **verifiable trust system**.
+The TEA Trust Architecture extends TEA from a **data exchange model** to a **verifiable trust system**.
 
-Base TEA allows:
+Core TEA defines:
 
-- structured artifact exchange
-- SBOM distribution
-- release metadata publication
+- APIs  
+- collections  
+- artifact distribution  
 
 The Trust Architecture adds:
 
-> **cryptographically verifiable, time-bound, and independently auditable trust**
+> **cryptographic evidence that remains verifiable over time**
 
-The core design principle is:
+This is required to meet regulatory expectations such as:
 
-> Trust is not tied to long-lived keys, but to **evidence**.
+- EU Cyber Resilience Act (CRA)  
+- long-term SBOM retention  
+- auditability requirements  
 
 ---
 
-## 2. Scope and Layering
+## 2. Relationship to TEA Core
 
-### 2.1 Optional overlay
+This specification is an **overlay**.
 
-The Trust Architecture is:
-
-- OPTIONAL
-- fully compatible with base TEA
-- incrementally adoptable
-
-### 2.2 Separation of concerns
-
-| Layer | Responsibility |
-|------|----------------|
-| TEA Core | Data model and APIs |
-| Trust Architecture | Trust, validation, evidence |
-| Profiles | Policy constraints |
-
-### 2.3 Key consequence
-
-A TEA system may:
-
-- operate without trust architecture (basic mode)
-- enforce trust architecture (high assurance mode)
+| Feature | TEA Core | TEA with Trust Architecture |
+|--------|----------|-----------------------------|
+| Collections | REQUIRED | REQUIRED |
+| Artifact signatures | OPTIONAL | REQUIRED (profile-dependent) |
+| Timestamps | OPTIONAL | REQUIRED |
+| Evidence bundles | NOT DEFINED | REQUIRED |
+| Transparency | OPTIONAL | PROFILE-DEPENDENT |
+| DNS trust anchors | OPTIONAL | REQUIRED (TEA-native) |
 
 ---
 
 ## 3. Terminology
 
-- **TEA artifact**: immutable content object (SBOM, binary, etc.)
-- **TEA collection**: release statement binding artifacts
-- **Evidence bundle**: cryptographic proof container
-- **Trust anchor**: root of trust published via DNS
-- **TAPS**: Trust Anchor Publication Service
-- **TSA**: Time Stamp Authority
-- **Transparency log**: append-only verifiable log (Rekor, Sigsum, SCITT)
+- **TEA artifact**: A binary or structured object (e.g. SBOM, firmware)
+- **TEA collection**: A release definition binding artifacts together
+- **Evidence bundle**: A structured object containing:
+  - signature  
+  - certificate  
+  - timestamp(s)  
+  - optional transparency evidence  
+- **TAPS**: Trust Anchor Publication Service (DNS-based distribution)
+- **TEI**: Transparency Exchange Identifier
 
 ---
 
 ## 4. Architecture Overview
 
-The Trust Architecture introduces three interacting domains:
+The architecture consists of three domains:
 
-### 4.1 Discovery domain
-- resolves TEI → API endpoints
-- provides signed metadata
+1. **Discovery trust**  
+2. **Consumer trust**  
+3. **Publication trust**
 
-### 4.2 Publication domain
-- creates artifacts and collections
-- generates signatures and evidence
+Each domain addresses a different question:
 
-### 4.3 Consumption domain
-- validates artifacts and collections
-- evaluates trust evidence
+| Domain | Question |
+|--------|----------|
+| Discovery | Where is the correct TEA service? |
+| Consumer | Is this artifact valid and authentic? |
+| Publication | Was this release intentionally published? |
 
 ---
 
 ## 5. Trust Model
 
-The TEA trust model is **evidence-based**, not revocation-based.
+Trust is derived from **independent evidence sources**:
 
-### 5.1 Key principles
+- signature  
+- timestamp  
+- transparency log  
+- DNS or PKI trust anchor  
 
-- short-lived certificates (< 1 hour)
-- no reliance on revocation
-- long-term validation via evidence
-- distributed trust (DNS, TSA, transparency)
+> No single component defines trust.
 
-### 5.2 Rationale
-
-Traditional PKI depends on:
-
-- long-lived certificates
-- revocation infrastructure
-
-These are fragile over long time periods.
-
-TEA replaces this with:
-
-- **ephemeral signing keys**
-- **durable evidence**
+Consistency across these sources establishes trust.
 
 ---
 
-## 6. Cryptographic Model
+## 6. Evidence Model
 
-### 6.1 Key pairs and certificates
+### 6.1 Evidence bundle as trust unit
 
-- Signing is performed using **private keys in key pairs**
-- Public keys are embedded in certificates
-- Certificates act as **validity wrappers**, not identities
+> The evidence bundle is the primary unit of trust.
 
-### 6.2 Algorithm requirements
+It binds:
 
-- **Ed25519 MUST be used**
-- No other algorithms are permitted
-
-### 6.3 Certificate constraints
-
-- Lifetime MUST be **< 1 hour**
-- Exactly one DNS SAN required
-- Optional second SAN allowed (backup domain)
-
-### 6.4 Key reuse prohibition
-
-> A key pair MUST NOT be reused across certificates.
-
-Publishers MUST enforce:
-
-- no reuse of public key fingerprints
-- rejection of duplicate keys in publication workflows
-
-### 6.5 Rationale
-
-This ensures:
-
-- no long-term key exposure risk
-- no dependency on revocation
-- clean trust boundaries
+```text
+object → signature → timestamp → transparency
+```
 
 ---
 
-## 7. Evidence Model
+### 6.2 Evidence contents
 
-### 7.1 Core concept
+An evidence bundle MUST include:
 
-An **evidence bundle** is the unit of trust.
+- signature  
+- certificate (public key)  
+- at least one timestamp  
 
-It contains:
+It MAY include:
 
-- signature
-- certificate (with public key)
-- timestamp(s)
-- transparency proof(s) (optional)
-
-### 7.2 Why bundles exist
-
-Validation requires multiple pieces of information:
-
-- signature alone is insufficient
-- certificate alone is insufficient
-- timestamp alone is insufficient
-
-The bundle combines all required elements.
+- transparency log entries (Sigsum, Rekor, SCITT)
 
 ---
 
-## 8. Evidence Binding Rules
+### 6.3 Detached evidence
 
-### 8.1 Binding target
+Evidence bundles MAY be:
 
-Evidence bundles bind to:
+- embedded  
+- referenced externally  
 
-- **TEA artifacts**
-- **TEA collections**
-- **discovery documents**
+If external, the collection MUST include:
 
-### 8.2 Artifact evidence reuse
+```text
+SHA-256 digest of the evidence bundle
+```
+
+---
+
+## 7. Evidence Binding Rules
+
+### 7.1 Signature binding
+
+The signature MUST cover:
+
+- the exact bytes of the object  
+
+---
+
+### 7.2 Timestamp binding
+
+The timestamp MUST bind to:
+
+```text
+hash(signature)
+```
+
+NOT:
+
+- raw artifact  
+- raw collection  
+
+---
+
+### 7.3 Certificate validity
+
+The timestamp MUST satisfy:
+
+```text
+timestamp ∈ [cert.notBefore, cert.notAfter]
+```
+
+---
+
+### 7.4 Transparency binding
+
+Transparency evidence MUST refer to:
+
+- the signature OR  
+- the timestamped signature  
+
+Mismatch MUST result in validation failure.
+
+---
+
+## 8. Trust Domains
+
+### 8.1 Discovery trust
+
+Establishes:
+
+- correct API endpoint  
+- authorized delegation  
+
+Requires:
+
+- TLS  
+- signature  
+- timestamp (REQUIRED)  
+
+---
+
+### 8.2 Consumer trust
+
+Validates:
+
+- TEA artifacts  
+- TEA collections  
+- evidence bundles  
+
+---
+
+### 8.3 Publication trust
+
+Ensures:
+
+- releases are intentional  
+- publication is authorized  
+
+---
+
+## 9. Cryptographic Model
+
+### 9.1 Algorithm
+
+- Ed25519 ONLY  
+
+### 9.2 Digest
+
+- SHA-256 ONLY  
+
+---
+
+### 9.3 Identity
+
+```text
+identity = SHA-256(public key)
+```
+
+---
+
+### 9.4 Key usage
+
+- one key pair per signing event  
+- key reuse is prohibited  
+
+---
+
+## 10. Timestamp Model
+
+### 10.1 Purpose
+
+Timestamps provide:
+
+- proof of signing time  
+- ordering  
+- long-term validation  
+
+---
+
+### 10.2 Requirements
+
+- MUST be trusted (validated via CA trust store)  
+- MUST bind to signature  
+- SHOULD use multiple TSAs  
+
+---
+
+### 10.3 Rationale
+
+Long-term trust depends on:
+
+> evidence of *when* something was signed, not just *who* signed it
+
+---
+
+## 11. Transparency Model
+
+### 11.1 Supported systems
+
+- Sigsum  
+- Rekor  
+- SCITT (optional)  
+
+---
+
+### 11.2 Role
+
+Transparency provides:
+
+- auditability  
+- tamper detection  
+- publication evidence  
+
+---
+
+### 11.3 Policy
+
+- transparency is OPTIONAL  
+- REQUIRED in high-assurance profiles  
+
+---
+
+## 12. DNS and Trust Anchoring
+
+### 12.1 TEA-native (TAPS)
+
+- certificates MUST be published in DNS  
+- DNSSEC is OPTIONAL but recommended  
+
+---
+
+### 12.2 WebPKI
+
+- DNS MUST NOT be used as trust anchor  
+- DNS MAY provide CAA policy  
+
+---
+
+## 13. Artifact vs Collection Semantics
+
+### 13.1 TEA artifact
+
+Represents:
+
+- exact binary content  
+
+Authenticity comes from:
+
+- evidence bundle  
+
+---
+
+### 13.2 TEA collection
+
+Represents:
+
+- release composition  
+
+Does NOT prove artifact authenticity.
+
+---
+
+## 14. Evidence Reuse Rules
+
+### 14.1 Artifact evidence
 
 Artifact evidence bundles:
 
-- MAY be reused across collections
-- represent immutable content
-
-### 8.3 Collection evidence reuse
-
-Collection evidence bundles:
-
-- MUST NOT be reused across collections
-- represent unique release statements
-
-### 8.4 External bundle integrity
-
-When an evidence bundle is external:
-
-- it MUST be referenced with a SHA-256 digest
-- digest MUST be over canonical JSON (RFC 8785)
+- MAY be reused  
+- MAY appear in multiple collections  
 
 ---
 
-## 9. Timestamp Model
+### 14.2 Collection evidence
 
-### 9.1 Requirement
+Collection evidence:
 
-Timestamps are:
-
-> REQUIRED in the Trust Architecture
-
-### 9.2 What timestamps prove
-
-- existence of signature at a given time
-- ordering of events
-- protection against backdating
-
-### 9.3 Trust model
-
-Trust in timestamps relies on:
-
-- trusted TSAs
-- cryptographic binding to signature
-
-### 9.4 Operational guidance
-
-- multiple TSAs SHOULD be used
-- timestamp consistency SHOULD be monitored
+- MUST NOT be reused  
+- is unique per collection version  
 
 ---
 
-## 10. Transparency Model
+### 14.3 Rationale
 
-### 10.1 Optional but recommended
+Artifacts are immutable objects.
 
-Transparency logging is:
-
-- OPTIONAL
-- profile-driven
-
-Supported systems:
-
-- Rekor
-- Sigsum
-- SCITT
-
-### 10.2 What transparency provides
-
-- append-only logging
-- detection of equivocation
-- auditability
-
-### 10.3 Trust model
-
-Trust depends on:
-
-- log integrity
-- inclusion proofs
-- witness systems (e.g. Sigsum)
+Collections are contextual statements.
 
 ---
 
-## 11. DNS Trust Anchoring (TAPS)
+## 15. Publication Model
 
-### 11.1 Concept
+### 15.1 Workflow
 
-TAPS publishes trust anchors via DNS.
-
-### 11.2 Mechanism
-
-- DNS CERT records contain certificates
-- DNSSEC MAY protect integrity
-
-### 11.3 Role
-
-DNS provides:
-
-- initial trust anchor distribution
-- independence from API endpoints
-
-### 11.4 WebPKI interaction
-
-Even in WebPKI mode:
-
-- DNS CAA records SHOULD be used
-- DNSSEC MAY strengthen validation
+1. Build artifacts  
+2. Sign artifacts  
+3. Create evidence bundles  
+4. Assemble collection  
+5. Commit (authoritative step)  
 
 ---
 
-## 12. Discovery Trust
+### 15.2 Commit step
 
-### 12.1 Separation
+The commit step MUST:
 
-Discovery trust is separate from artifact trust.
-
-### 12.2 Requirements
-
-In Trust Architecture:
-
-- discovery MUST be signed
-- discovery MUST include timestamp
-
-### 12.3 Rationale
-
-Discovery establishes:
-
-- service location
-- trust context
+- require strong authentication  
+- validate evidence  
+- enforce trust model  
+- optionally publish DNS trust anchors  
 
 ---
 
-## 13. Validation Model
+### 15.3 Key property
 
-### 13.1 Artifact validation
-
-- verify signature
-- validate certificate
-- verify timestamp
-- verify transparency (if present)
-
-### 13.2 Collection validation
-
-- verify collection integrity
-- validate collection evidence (if present)
-
-### 13.3 Combined result
-
-A valid system must conclude:
-
-> artifact is authentic AND belongs to this collection
+> CI/CD prepares — humans authorize — TEA commits
 
 ---
 
-## 14. Publisher Responsibilities
+## 16. CI/CD Authentication and Authorization
 
-Publishers MUST:
+TEA services MUST support:
 
-- generate unique key pairs
-- prevent key reuse
-- produce evidence bundles
-- timestamp all signatures
-- optionally log to transparency systems
-- publish trust anchors in DNS
+- short-lived credentials  
+- OIDC-based authentication  
+- bearer tokens  
 
 ---
 
-## 15. Consumer Responsibilities
+### 16.1 Requirements
 
-Consumers MUST:
-
-- validate signatures
-- validate timestamps
-- verify evidence bundle integrity
-- enforce policy rules
-
-Consumers SHOULD:
-
-- validate transparency logs
-- verify DNS trust anchors
+- tokens MUST be bound to job identity  
+- tokens MUST be short-lived  
+- actions MUST be authorized  
 
 ---
 
-## 16. Security Considerations
+## 17. Messaging and Logging Requirements
 
-### 16.1 Key compromise
+### 17.1 Requirements
 
-Mitigated by:
+TEA services MUST log:
 
-- short-lived keys
-- no reuse
-
-### 16.2 Time manipulation
-
-Mitigated by:
-
-- trusted timestamps
-- multiple TSAs
-
-### 16.3 DNS attacks
-
-Mitigated by:
-
-- DNSSEC (optional)
-- independent validation
-
-### 16.4 Transparency risks
-
-Mitigated by:
-
-- multiple logs
-- witness verification
+- signing events  
+- timestamp acquisition  
+- transparency submissions  
+- commit actions  
 
 ---
 
-## 17. Normative References
+### 17.2 Audit properties
 
-- RFC 2119 / RFC 8174 — Requirement keywords  
+Logs MUST be:
+
+- tamper-evident  
+- time-stamped  
+- attributable  
+
+---
+
+### 17.3 Messaging
+
+Publication workflows SHOULD emit events for:
+
+- artifact creation  
+- evidence generation  
+- commit completion  
+
+---
+
+## 18. Security Properties
+
+This architecture provides:
+
+- resistance to key compromise (short-lived keys)  
+- no reliance on revocation  
+- long-term verifiability  
+- distributed trust  
+- offline validation  
+
+---
+
+## 19. Implementation Guidance
+
+Implementations SHOULD:
+
+- store artifact + evidence + digest  
+- prevent key reuse  
+- support multipart artifact delivery:
+  - artifact only  
+  - artifact + signature  
+  - artifact + evidence bundle  
+
+---
+
+## 20. Normative References
+
+- RFC 2119 / RFC 8174  
 - RFC 5280 — X.509  
-- RFC 6962 — Certificate Transparency  
 - RFC 3161 — Time-Stamp Protocol  
-- RFC 4033–4035 — DNSSEC  
-- RFC 6844 — CAA Records  
-- RFC 8785 — JSON Canonicalization Scheme  
+- RFC 8785 — JSON Canonicalization  
+- RFC 4033/4034/4035 — DNSSEC  
+- RFC 8659 — CAA  
 
 ---
 
-## 18. Informative References
+## 21. Informative References
 
-- Rekor Transparency Log  
-- Sigsum Transparency Log  
-- IETF SCITT Architecture  
-- EU Cyber Resilience Act (CRA)  
+- TEA Core Specification  
+- TEA Evidence Bundle Specification  
+- TEA Evidence Validation Specification  
+- TEA Discovery Specification  
+- TEA X.509 Profile  
+- Sigsum Documentation  
+- Rekor Documentation  
+- IETF SCITT  
 
 ---
 
 ## Final Statement
 
-The TEA Trust Architecture establishes that:
+The TEA Trust Architecture establishes a model where:
 
-> Trust is not derived from long-lived keys,  
-> but from verifiable, time-bound, and independently auditable evidence.
+> **Trust is not granted — it is constructed from verifiable evidence.**
 
-This enables:
+It ensures that:
 
-- long-term validation
-- offline verification
-- resilience against infrastructure changes
+- artifacts are authentic  
+- releases are intentional  
+- validation remains possible for decades  
 
-and aligns TEA with modern regulatory and operational requirements.
+without relying on:
+
+- long-lived keys  
+- centralized trust  
+- revocation infrastructure  
