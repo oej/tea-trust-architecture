@@ -1,0 +1,356 @@
+# 📘 TEA Discovery Specification
+**Version:** 1.0  
+**Status:** Draft (Core TEA Specification)
+
+---
+
+## Table of Contents
+
+- [1. Introduction](#1-introduction)
+- [2. Role of Discovery in TEA](#2-role-of-discovery-in-tea)
+- [3. Starting Point: TEI](#3-starting-point-tei)
+- [4. Discovery Mechanism](#4-discovery-mechanism)
+- [5. Discovery Endpoint](#5-discovery-endpoint)
+- [6. Discovery Document Structure](#6-discovery-document-structure)
+- [7. API Endpoints](#7-api-endpoints)
+- [8. Transport Security (TLS)](#8-transport-security-tls)
+- [9. Discovery Integrity and Authenticity](#9-discovery-integrity-and-authenticity)
+- [10. Caching and Freshness](#10-caching-and-freshness)
+- [11. Error Handling](#11-error-handling)
+- [12. Relationship to TEA Trust Architecture](#12-relationship-to-tea-trust-architecture)
+- [13. Security Considerations](#13-security-considerations)
+- [14. References](#14-references)
+
+---
+
+## 1. Introduction
+
+The TEA discovery mechanism defines how a consumer locates the correct API endpoints for a given manufacturer.
+
+Discovery is the **first step in all TEA interactions**, enabling a consumer to map an identifier to a service endpoint.
+
+This specification defines:
+
+- how discovery is initiated  
+- how discovery documents are retrieved  
+- how API endpoints are obtained  
+
+---
+
+## 2. Role of Discovery in TEA
+
+TEA separates:
+
+- **identity** → TEI  
+- **location** → discovery  
+- **data retrieval** → API  
+
+Discovery answers the question:
+
+> “Where can I retrieve authoritative TEA data for this identifier?”
+
+---
+
+## 3. Starting Point: TEI
+
+All discovery begins with a **Transparency Exchange Identifier (TEI)**.
+
+Example:
+
+```text
+tei://example.com/purl/BASE64URL_IDENTIFIER
+```
+
+From the TEI:
+
+- the **authority (`example.com`)** is extracted  
+- this authority defines the discovery domain  
+
+Normative statement:
+
+```text
+The authority component of the TEI MUST be used as the basis for discovery.
+```
+
+---
+
+## 4. Discovery Mechanism
+
+TEA uses the **well-known URI mechanism** defined in RFC 8615.
+
+Discovery document location:
+
+```text
+https://<authority>/.well-known/tea
+```
+
+Example:
+
+```text
+https://example.com/.well-known/tea
+```
+
+This endpoint returns a JSON document describing:
+
+- available TEA API endpoints  
+- service configuration  
+
+---
+
+## 5. Discovery Endpoint
+
+### Requirements
+
+- MUST use HTTPS  
+- MUST be accessible via the authority domain  
+- MUST follow RFC 8615 (`.well-known`)  
+
+Normative statement:
+
+```text
+The discovery document MUST be retrieved over HTTPS from the authority domain using the path /.well-known/tea.
+```
+
+---
+
+## 6. Discovery Document Structure
+
+The discovery document is a JSON object.
+
+Example:
+
+```json
+{
+  "version": "1.0",
+  "api": {
+    "baseUrl": "https://api.example.com/tea",
+    "endpoints": {
+      "collections": "/collections",
+      "artifacts": "/artifacts"
+    }
+  }
+}
+```
+
+---
+
+### Fields
+
+#### version
+
+- version of the discovery document format  
+
+#### api.baseUrl
+
+- base URL for TEA API  
+
+#### api.endpoints
+
+Defines relative API endpoints.
+
+---
+
+## 7. API Endpoints
+
+The discovery document defines how clients construct API calls.
+
+Example:
+
+```text
+GET https://api.example.com/tea/collections?tei=<tei>
+```
+
+Endpoints SHOULD be:
+
+- stable  
+- versioned  
+- backward compatible  
+
+---
+
+## 8. Transport Security (TLS)
+
+Discovery MUST be performed over HTTPS.
+
+TLS provides:
+
+- confidentiality  
+- integrity  
+- server authentication  
+
+Normative statement:
+
+```text
+Discovery retrieval MUST use HTTPS as defined in RFC 9110 and RFC 2818.
+```
+
+---
+
+### Important Clarification
+
+TLS provides **transport-level security only**.
+
+It does NOT:
+
+- guarantee long-term integrity  
+- provide non-repudiation  
+- prevent replay of older discovery documents  
+
+---
+
+## 9. Discovery Integrity and Authenticity
+
+While TLS secures transport, additional mechanisms MAY be used to ensure:
+
+- integrity  
+- authenticity  
+- temporal validity  
+
+These include:
+
+- digital signatures  
+- timestamps (RFC 3161)  
+- transparency systems  
+
+These mechanisms are defined in the TEA trust architecture.
+
+---
+
+### Key Insight
+
+Discovery is a **bootstrap trust step**:
+
+- TLS ensures secure retrieval  
+- signatures and timestamps ensure verifiable authenticity  
+
+---
+
+## 10. Caching and Freshness
+
+Discovery documents MAY be cached.
+
+Implementations SHOULD:
+
+- respect HTTP caching headers  
+- periodically refresh discovery data  
+- handle endpoint changes gracefully  
+
+---
+
+### Risk
+
+Stale discovery data may result in:
+
+- outdated endpoints  
+- incorrect service routing  
+
+---
+
+## 11. Error Handling
+
+### Common errors
+
+#### 404 Not Found
+
+- discovery endpoint not present  
+
+#### 503 Service Unavailable
+
+- temporary failure  
+
+#### TLS failure
+
+- certificate validation error  
+
+---
+
+### Client behavior
+
+Clients SHOULD:
+
+- retry with backoff  
+- validate TLS certificates  
+- fail closed if discovery cannot be validated  
+
+---
+
+## 12. Relationship to TEA Trust Architecture
+
+This document defines **how discovery works**, not how it is trusted.
+
+The TEA trust architecture adds:
+
+- signature validation  
+- timestamp validation  
+- transparency verification  
+- DNS-based trust anchors  
+
+---
+
+### Separation Principle
+
+| Layer | Responsibility |
+|------|--------------|
+| Discovery | location of services |
+| Trust Architecture | validation of authenticity |
+
+---
+
+## 13. Security Considerations
+
+### 13.1 Authority Spoofing
+
+An attacker may attempt to control a domain.
+
+Mitigation:
+
+- TLS validation  
+- trust architecture validation  
+
+---
+
+### 13.2 DNS Attacks
+
+DNS poisoning may redirect discovery.
+
+Mitigation:
+
+- DNSSEC (optional)  
+- HTTPS validation  
+
+---
+
+### 13.3 Stale Data
+
+Cached discovery documents may be outdated.
+
+Mitigation:
+
+- cache control  
+- refresh policies  
+
+---
+
+### 13.4 Bootstrap Trust Problem
+
+Initial discovery depends on:
+
+- DNS  
+- TLS  
+
+Trust is strengthened by:
+
+- signatures  
+- timestamps  
+- transparency  
+
+---
+
+## 14. References
+
+- RFC 3986 — URI Syntax  
+- RFC 8615 — Well-Known URIs  
+- RFC 9110 — HTTP Semantics  
+- RFC 2818 — HTTP over TLS  
+
+---
