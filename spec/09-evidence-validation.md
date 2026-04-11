@@ -1,430 +1,425 @@
-# 📘 TEA Trust Architecture — Evidence Validation Specification
+# 📘 TEA Evidence Validation Specification
 **Version:** 1.0  
-**Status:** Draft (Normative, Implementation-Ready)
+**Status:** Draft (Normative, RFC-style)
 
 ---
 
 ## Status
 
-This document defines how TEA evidence bundles are **validated**.
+This document defines how a TEA consumer validates:
+
+- **evidence bundles**
+- **TEA artifacts**
+- **TEA collections**
+- **discovery documents**
 
 It specifies:
 
 - validation steps  
-- cryptographic checks  
-- binding rules  
-- transparency validation models  
+- required checks  
+- failure conditions  
+- policy considerations  
+
+This specification applies to:
+
+- **TEA Trust Architecture (REQUIRED)**
+- **base TEA (PARTIAL / OPTIONAL)**
 
 The key words **MUST**, **SHOULD**, and **MAY** are to be interpreted as described in:
 
 - RFC 2119  
 - RFC 8174  
 
-This document is intended to be used with:
-
-- TEA Evidence Bundle Specification  
-- TEA X.509 Profile  
-- RFC 3161 (Time-Stamp Protocol)  
-
 ---
 
 ## Table of Contents
 
-1. [Purpose](#1-purpose)  
-2. [Scope](#2-scope)  
-3. [Validation Philosophy](#3-validation-philosophy)  
-4. [Inputs](#4-inputs)  
-5. [Validation Model Overview](#5-validation-model-overview)  
-6. [Algorithm Requirements](#6-algorithm-requirements)  
-7. [Step-by-Step Validation](#7-step-by-step-validation)  
-8. [Certificate Validation](#8-certificate-validation)  
+1. [Introduction](#1-introduction)  
+2. [Validation Philosophy](#2-validation-philosophy)  
+3. [Validation Scope](#3-validation-scope)  
+4. [Inputs to Validation](#4-inputs-to-validation)  
+5. [Evidence Bundle Validation](#5-evidence-bundle-validation)  
+6. [Artifact Validation](#6-artifact-validation)  
+7. [Collection Validation](#7-collection-validation)  
+8. [Discovery Validation](#8-discovery-validation)  
 9. [Timestamp Validation](#9-timestamp-validation)  
 10. [Transparency Validation](#10-transparency-validation)  
-11. [Binding Validation](#11-binding-validation)  
-12. [Offline Validation Requirements](#12-offline-validation-requirements)  
-13. [Error Handling](#13-error-handling)  
-14. [Implementation Hints](#14-implementation-hints)  
+11. [DNS and Trust Anchor Validation](#11-dns-and-trust-anchor-validation)  
+12. [Policy Controls](#12-policy-controls)  
+13. [Validation Outcomes](#13-validation-outcomes)  
+14. [Error Conditions](#14-error-conditions)  
 15. [Security Considerations](#15-security-considerations)  
 16. [Normative References](#16-normative-references)  
 17. [Informative References](#17-informative-references)  
-18. [Final Statement](#18-final-statement)  
 
 ---
 
-## 1. Purpose
+## 1. Introduction
 
-This document defines how a validator verifies that:
+Validation in TEA answers the question:
 
-> a TEA artifact is authentic, correctly signed, properly timestamped, and (optionally) transparently published.
+> **Can this object be trusted, and under what conditions?**
 
----
+The TEA Trust Architecture defines a **multi-layer validation model**:
 
-## 2. Scope
+- evidence validation  
+- artifact validation  
+- collection validation  
+- discovery validation  
 
-Applies to validation of:
-
-- TEA artifacts (primary)  
-- TEA collections (optional)  
-- discovery documents (optional)  
-
----
-
-## 3. Validation Philosophy
-
-### 3.1 Evidence-Based Trust
-
-Validation relies only on:
-
-- cryptographic verification  
-- preserved evidence  
-
-NOT on:
-
-- live infrastructure  
-- online services  
+Each layer has a distinct role and MUST NOT be conflated.
 
 ---
 
-### 3.2 Deterministic Validation
+## 2. Validation Philosophy
 
-Given identical inputs:
+### 2.1 Evidence-first model
 
-- all compliant validators MUST produce identical results  
+> The evidence bundle is the unit of trust.
 
----
+Validation MUST start with:
 
-### 3.3 Fail-Closed Model
-
-Any failure:
-
-> MUST result in rejection  
-
----
-
-## 4. Inputs
-
-Required:
-
-- artifact (binary)  
-- evidence bundle  
-
-Optional:
-
-- trust policy  
-- trusted TSA roots  
-- trusted transparency logs  
+- the evidence bundle  
+- not the collection  
+- not the transport  
+- not the API  
 
 ---
 
-## 5. Validation Model Overview
+### 2.2 Separation of concerns
 
-```text
-artifact → signature → certificate → timestamp → transparency
-```
-
-Each layer MUST bind to the next.
-
----
-
-## 6. Algorithm Requirements
-
-### 6.1 Signature Algorithm
-
-```text
-Ed25519
-```
-
-(RFC 8032, RFC 8410)
+| Object | What it proves |
+|--------|---------------|
+| Evidence bundle | Authenticity, time, optional transparency |
+| Artifact | Exact content |
+| Collection | Release membership |
+| Discovery | Service location |
 
 ---
 
-### 6.2 Hash Algorithm
+### 2.3 No revocation dependency
 
-```text
-SHA-256
-```
+Validation MUST NOT depend on:
 
-(RFC 6234)
+- OCSP  
+- CRLs  
 
----
+Trust is derived from:
 
-### 6.3 Enforcement
-
-Any deviation:
-
-> MUST fail validation  
+- timestamps  
+- evidence integrity  
 
 ---
 
-## 7. Step-by-Step Validation
+## 3. Validation Scope
 
-Validators MUST:
+Validation MAY apply to:
 
-1. verify artifact integrity  
-2. verify signature  
-3. verify certificate  
-4. verify timestamp  
-5. verify timestamp binding  
-6. verify transparency (if present or required)  
-7. verify transparency binding  
-8. apply policy  
+- TEA artifacts  
+- TEA collections  
+- discovery documents  
+
+Each requires different validation steps.
 
 ---
 
-## 8. Certificate Validation
+## 4. Inputs to Validation
 
-The certificate contains the **public key** corresponding to the private key used for signing.
+A validation process typically requires:
 
-Validators MUST:
-
-- verify certificate structure (RFC 5280)  
-- verify validity period  
-- verify public key matches signature  
+- target object (artifact, collection, or discovery)
+- evidence bundle
+- trust anchors (DNS or configured)
+- validation policy
+- optional transparency log access
 
 ---
 
-### 8.1 Time Validation
+## 5. Evidence Bundle Validation
 
-The timestamp MUST satisfy:
+Evidence validation MUST be performed before any higher-level validation.
 
-```text
-notBefore ≤ timestamp ≤ notAfter
-```
+### 5.1 Step-by-step process
+
+#### Step 1 — Structure validation
+- bundle MUST contain required fields:
+  - signature  
+  - certificate  
+  - timestamps  
+
+---
+
+#### Step 2 — Certificate validation
+- MUST conform to TEA X.509 profile  
+- MUST contain valid public key  
+- MUST respect validity period  
+
+---
+
+#### Step 3 — Signature validation
+- MUST verify using certificate public key  
+- MUST cover exact target bytes  
+
+---
+
+#### Step 4 — Timestamp validation
+- MUST exist  
+- MUST be cryptographically valid  
+- MUST bind to the signature  
+
+---
+
+#### Step 5 — Optional transparency validation
+- if present, MUST verify:
+  - inclusion proof  
+  - log consistency  
+
+---
+
+#### Step 6 — Canonicalization (if JSON)
+- MUST use RFC 8785 for hash validation  
+
+---
+
+### 5.2 Result
+
+Evidence validation produces:
+
+- VALID  
+- INVALID  
+
+---
+
+## 6. Artifact Validation
+
+Artifact validation combines:
+
+- artifact integrity  
+- evidence validation  
+
+### 6.1 Steps
+
+1. Compute SHA-256 digest of artifact  
+2. Compare with expected digest (from collection or reference)  
+3. Validate evidence bundle  
+
+---
+
+### 6.2 Result
+
+An artifact is valid if:
+
+- digest matches  
+- evidence bundle is valid  
+
+---
+
+## 7. Collection Validation
+
+### 7.1 Purpose
+
+Collection validation proves:
+
+- correct binding between artifacts and release  
+
+---
+
+### 7.2 Steps
+
+1. Validate collection structure  
+2. Validate artifact references  
+3. Verify artifact digests  
+4. Validate collection evidence (if present)  
+
+---
+
+### 7.3 Important rule
+
+> Collection validation does NOT prove artifact authenticity.
+
+Artifact evidence MUST be validated separately.
+
+---
+
+## 8. Discovery Validation
+
+### 8.1 Base TEA
+
+- validate TLS connection  
+- parse discovery document  
+
+---
+
+### 8.2 Trust Architecture
+
+1. Validate TLS  
+2. Validate discovery signature  
+3. Validate timestamp  
+4. Validate evidence bundle (if present)  
+
+---
+
+### 8.3 Result
+
+Discovery validation provides:
+
+- trusted API endpoint mapping  
 
 ---
 
 ## 9. Timestamp Validation
 
-Validators MUST:
+### 9.1 Requirements
 
-- verify RFC 3161 timestamp  
-- verify TSA signature  
-- extract timestamp  
-
----
-
-### 9.1 Binding Rule
-
-```text
-messageImprint = SHA-256(signature)
-```
+- MUST be cryptographically valid  
+- MUST bind to signature  
 
 ---
 
-### 9.2 Rationale
+### 9.2 Checks
 
-Timestamp proves:
+- TSA signature verification  
+- timestamp format validity  
+- consistency across multiple TSAs (if present)  
 
-> signature existed during certificate validity  
+---
+
+### 9.3 Policy
+
+Consumers SHOULD:
+
+- accept small time differences  
+- detect major inconsistencies  
 
 ---
 
 ## 10. Transparency Validation
 
-Transparency validation depends on the system used.
+### 10.1 Optional
+
+Transparency validation is:
+
+- OPTIONAL  
+- policy-driven  
 
 ---
 
-### 10.1 Requirement Levels
+### 10.2 Checks
 
-| Profile | Requirement |
-|--------|------------|
-| Minimal | OPTIONAL |
-| TEA-native | SHOULD |
-| High Assurance | REQUIRED |
+- inclusion proof verification  
+- log integrity  
+- consistency proof (if applicable)  
 
 ---
 
-### 10.2 General Requirements
+### 10.3 Sigsum-specific note
 
-If present, validators MUST:
+Consumers SHOULD verify:
 
-- verify inclusion proof  
-- verify signed log state  
-- verify binding to signature  
-
----
-
-### 10.3 Sigsum (Recommended)
-
-Validators MUST verify:
-
-- inclusion proof  
-- checkpoint (signed tree head)  
 - witness signatures  
+- quorum requirements  
 
 ---
 
-#### Witness Requirements
+## 11. DNS and Trust Anchor Validation
 
-- MUST meet quorum  
-- MUST validate against trusted witnesses  
+### 11.1 Trust anchor retrieval
 
----
+Trust anchors MAY be obtained via:
 
-Reference:
-
-- https://www.sigsum.org  
+- DNS CERT records  
+- DNSSEC (optional)  
 
 ---
 
-### 10.4 Rekor (Allowed)
+### 11.2 Checks
 
-Validators MUST verify:
-
-- inclusion proof  
-- signed tree head  
-
-Validators SHOULD verify:
-
-- log identity  
+- certificate matches DNS anchor  
+- DNSSEC validation (if available)  
 
 ---
 
-References:
+### 11.3 WebPKI mode
 
-- https://rekor.sigstore.dev  
-- https://www.sigstore.dev  
+Consumers MAY additionally verify:
 
----
-
-### 10.5 SCITT (Future)
-
-Validators MUST verify:
-
-- signed receipt  
-- binding to signature  
+- CAA records  
 
 ---
 
-Reference:
+## 12. Policy Controls
 
-- https://datatracker.ietf.org/wg/scitt/about/  
+Validation behavior is influenced by policy.
 
----
+### 12.1 Policy examples
 
-### 10.6 Absence of Transparency
-
-If required but missing:
-
-> validation MUST fail  
-
-If optional:
-
-> validation MAY proceed  
+- require transparency logs  
+- require multiple TSAs  
+- restrict acceptable trust anchors  
+- enforce time bounds  
 
 ---
 
-## 11. Binding Validation
+### 12.2 Key reuse detection
 
-All layers MUST refer to the same cryptographic object.
+Consumers SHOULD detect:
 
----
-
-### 11.1 Required Bindings
-
-| From | To | Requirement |
-|-----|----|------------|
-| Artifact | Signature | Signature verifies |
-| Signature | Timestamp | SHA-256 match |
-| Signature | Transparency | SHA-256 match |
-| Certificate | Signature | public key match |
+- reuse of public key fingerprints across evidence bundles  
 
 ---
 
-### 11.2 Failure Rule
+## 13. Validation Outcomes
 
-Any mismatch:
+Validation results MUST be one of:
 
-> MUST fail validation  
-
----
-
-## 12. Offline Validation Requirements
-
-Validation MUST be possible without:
-
-- TSA access  
-- transparency access  
-- certificate retrieval  
+- **VALID**  
+- **INVALID**  
+- **INDETERMINATE** (policy-dependent cases)  
 
 ---
 
-### 12.1 Required Data
+## 14. Error Conditions
 
-Evidence bundle MUST contain:
-
-- signature  
-- certificate  
-- timestamp  
-- transparency (if required)  
-
----
-
-## 13. Error Handling
-
-Validation MUST fail if:
+Validation MUST fail when:
 
 - signature invalid  
 - certificate invalid  
-- timestamp invalid  
-- transparency invalid (if required)  
-- binding mismatch  
-- unsupported algorithm  
+- timestamp missing  
+- digest mismatch  
+- canonicalization failure  
 
----
+Example identifiers:
 
-## 14. Implementation Hints
-
-- validate in strict order  
-- fail early  
-- cache trust anchors  
-- use constant-time crypto  
+- `VALIDATION_SIGNATURE_INVALID`  
+- `VALIDATION_CERT_INVALID`  
+- `VALIDATION_TIMESTAMP_INVALID`  
+- `VALIDATION_DIGEST_MISMATCH`  
+- `VALIDATION_CANONICALIZATION_ERROR`  
 
 ---
 
 ## 15. Security Considerations
 
-- certificates may be expired at validation time  
-- timestamp replaces certificate lifetime as time anchor  
-- transparency provides auditability  
-- Ed25519 reduces attack surface  
+### 15.1 Key reuse
+
+Mitigated by:
+
+- publisher enforcement  
+- consumer detection  
 
 ---
 
-## 16. Normative References
+### 15.2 Evidence substitution
 
-- RFC 2119  
-- RFC 8174  
-- RFC 5280 (X.509)  
-- RFC 8032 (Ed25519)  
-- RFC 8410 (Ed25519 in X.509)  
-- RFC 6234 (SHA-256)  
-- RFC 3161 (Timestamping)  
+Mitigated by:
+
+- SHA-256 digest binding  
 
 ---
 
-## 17. Informative References
+### 15.3 Time manipulation
 
-- Sigsum — https://www.sigsum.org  
-- Rekor — https://rekor.sigstore.dev  
-- Sigstore — https://www.sigstore.dev  
-- SCITT — https://datatracker.ietf.org/wg/scitt/about/  
+Mitigated by:
 
----
-
-## 18. Final Statement
-
-A valid TEA artifact satisfies:
-
-- correct signature  
-- valid certificate at signing time  
-- valid timestamp  
-- correct binding  
-- transparency inclusion (if required)  
-
----
-
-### Key Principle
-
-> Trust emerges from consistent, independent cryptographic evidence.
+- trusted TSAs  
+- multiple timestamps  
