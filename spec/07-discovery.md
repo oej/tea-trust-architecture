@@ -1,424 +1,518 @@
-# 📘 TEA Discovery Security Architecture
+# 📘 TEA Discovery Specification
 **Version:** 1.0  
-**Status:** Draft (Implementation-Ready)
+**Status:** Draft (Normative, Implementation-Ready)
+
+---
+
+## Status
+
+This document defines the **TEA discovery mechanism**, including:
+
+- how a client starts from a **TEI (Transparency Exchange Identifier)**
+- how discovery endpoints are located
+- how discovery metadata is structured and validated
+- how trust is established for discovery responses
+
+This specification applies to:
+
+- **base TEA**
+- **TEA with the Trust Architecture (overlay)**
+
+The key words **MUST**, **SHOULD**, and **MAY** are to be interpreted as described in:
+
+- RFC 2119
+- RFC 8174
 
 ---
 
 ## Table of Contents
 
-- [1. Introduction](#1-introduction)
-- [2. TEI – Discovery Starting Point](#2-tei--discovery-starting-point)
-- [3. Design Principles](#3-design-principles)
-- [4. Discovery Endpoint](#4-discovery-endpoint)
-- [5. Trust Layers](#5-trust-layers)
-- [6. Trust Models](#6-trust-models)
-- [7. DNS Trust Model (TEA-Native)](#7-dns-trust-model-tea-native)
-- [8. Certificate Profile](#8-certificate-profile)
-- [9. Signature Model](#9-signature-model)
-- [10. Canonicalization](#10-canonicalization)
-- [11. Timestamp Requirements](#11-timestamp-requirements)
-- [12. Transparency](#12-transparency)
-- [13. Validation Procedures](#13-validation-procedures)
-- [14. Validity Scope](#14-validity-scope)
-- [15. Security Properties](#15-security-properties)
-- [16. STRIDE Summary](#16-stride-summary)
-- [17. Error Model](#17-error-model)
-- [18. Consumer Flow](#18-consumer-flow)
-- [19. Final Summary](#19-final-summary)
+1. [Introduction](#1-introduction)  
+2. [Transparency Exchange Identifier (TEI)](#2-transparency-exchange-identifier-tei)  
+3. [Discovery Flow Overview](#3-discovery-flow-overview)  
+4. [Discovery Endpoint Resolution](#4-discovery-endpoint-resolution)  
+5. [Discovery Document](#5-discovery-document)  
+6. [API Endpoints](#6-api-endpoints)  
+7. [Transport Security](#7-transport-security)  
+8. [Trust Models](#8-trust-models)  
+9. [Discovery Signatures and Evidence](#9-discovery-signatures-and-evidence)  
+10. [Timestamp Semantics](#10-timestamp-semantics)  
+11. [Transparency Logs](#11-transparency-logs)  
+12. [DNS and DNSSEC Considerations](#12-dns-and-dnssec-considerations)  
+13. [Validation Process](#13-validation-process)  
+14. [Error Conditions](#14-error-conditions)  
+15. [Security Considerations](#15-security-considerations)  
+16. [Normative References](#16-normative-references)  
+17. [Informative References](#17-informative-references)  
 
 ---
 
 ## 1. Introduction
 
-The TEA discovery mechanism is the **bootstrap trust step** of the TEA ecosystem.
+The TEA discovery mechanism provides a standardized way for a consumer to locate:
 
-It answers two fundamental questions:
+- TEA API endpoints
+- trust metadata
+- publisher-controlled service configuration
 
-1. **Where is the correct TEA service for this product?**  
-2. **Is that mapping to API endpoints authorized by the manufacturer?**
+Discovery is the **entry point into a TEA ecosystem**.
 
-Discovery is a two-stage process:
+Unlike many systems, TEA discovery is designed to support both:
 
-```
-TEI → manufacturer domain → /.well-known/tea → TEA API endpoints
-```
+- simple deployments (base TEA)
+- strongly verifiable deployments (TEA Trust Architecture)
 
-Discovery provides:
+A key design goal is:
 
-- API endpoint authorization  
-- trust model signaling  
-- cryptographic protection of service metadata  
-
-It does **not** establish trust in TEA artefacts or TEA collections.  
-That is handled separately by signatures, timestamps, transparency, and evidence bundles.
+> Discovery should provide reliable service location while allowing independent verification of trust.
 
 ---
 
-## 2. TEI – Discovery Starting Point
+## 2. Transparency Exchange Identifier (TEI)
 
-### 2.1 What is a TEI?
+Discovery always begins with a **TEI (Transparency Exchange Identifier)**.
 
-A **Transparency Exchange Identifier (TEI)** identifies a **product**, not a specific release.
+The TEI identifies a **product or service namespace**, not a specific release.
 
-It is the **entry point for discovery**.
+### 2.1 TEI format
 
-Example structure:
+A TEI is expressed as a URI:
 
+```text
+tei://<authority>/<type>/<base64url-identifier>
 ```
-tei://example.com/product/<base64url-encoded-id>
+
+### 2.2 Example
+
+```text
+tei://example.com/product/YWJjMTIz
 ```
 
-Optional version selection:
+### 2.3 Semantics
 
-```
-tei://example.com/product/<base64url-id>?version=<string>
+- `<authority>`: DNS domain used for discovery
+- `<type>`: identifier type (e.g. product)
+- `<identifier>`: vendor-controlled identifier, base64url-encoded
+
+### 2.4 Important property
+
+The TEI deliberately reuses **vendor-controlled identifiers**.
+
+TEA does not require creation of new identifiers when existing ones are available.
+
+---
+
+## 3. Discovery Flow Overview
+
+The discovery process follows these steps:
+
+1. **Start with TEI**
+2. Extract the authority domain
+3. Resolve DNS for the domain
+4. Retrieve the `.well-known` discovery document
+5. Validate transport security (TLS)
+6. Optionally validate signature and evidence
+7. Extract API endpoints
+
+### 3.1 High-level flow
+
+```text
+TEI → DNS → HTTPS GET /.well-known/tea → Discovery Document → API Endpoints
 ```
 
 ---
 
-### 2.2 Key Properties
+## 4. Discovery Endpoint Resolution
 
-- TEI reuses **existing vendor identifiers where possible**  
-- UUIDs are used only when no identifier exists  
-- identifier MUST be **BASE64url encoded**  
-- TEI domain MUST be the **manufacturer-controlled domain**  
+The discovery document is located at:
+
+```text
+https://<authority>/.well-known/tea
+```
+
+### 4.1 DNS resolution
+
+DNS resolution:
+
+- MAY return IPv4 and/or IPv6
+- MAY use modern DNS mechanisms such as:
+  - HTTPS (SVCB) records
+  - service binding records
+
+These follow standard DNS resolution behavior.
+
+### 4.2 Redirects
+
+The discovery document MAY indicate API endpoints hosted on:
+
+- the same domain
+- a different domain
+
+Important:
+
+> Discovery and API hosting domains may differ.
+
+Trust decisions must account for this separation.
 
 ---
 
-### 2.3 Why TEI Matters
+## 5. Discovery Document
 
-TEI ensures:
+The discovery document is a JSON object describing:
 
-- discovery starts from a **manufacturer-controlled namespace**  
-- no central registry is required  
-- identifiers remain stable across infrastructure changes  
+- API endpoints
+- supported features
+- trust model indicators
+- optional signature and evidence references
+
+### 5.1 Example
+
+```json
+{
+  "tei": "tei://example.com/product/YWJjMTIz",
+  "apiEndpoints": {
+    "consumer": "https://api.example.net/consumer",
+    "publisher": "https://api.example.net/publisher"
+  },
+  "trustModel": "tea-trust",
+  "signature": {
+    "uri": "https://example.com/discovery.sig"
+  },
+  "evidenceBundle": {
+    "uri": "https://example.com/discovery.bundle.json",
+    "digest": {
+      "algorithm": "sha-256",
+      "value": "BASE64URL_DIGEST"
+    }
+  }
+}
+```
 
 ---
 
-### 2.4 Resolution Model
+## 6. API Endpoints
 
-The TEI resolves to a manufacturer domain:
+The discovery document MUST define **API endpoints**.
 
-```
-tei://example.com/... → example.com
-```
+Typical endpoints include:
 
-Consumers then perform discovery using:
+- consumer API
+- publisher API
 
-```
-https://example.com/.well-known/tea
-```
+### 6.1 Naming
 
-DNS resolution may return:
+The term **API endpoints** MUST be used instead of generic "endpoints" to avoid ambiguity.
 
-- IPv4 (A records)  
-- IPv6 (AAAA records)  
-- HTTPS/SVCB records  
+### 6.2 Flexibility
 
-Resolution MUST follow standard HTTPS resolution behavior.
+Endpoints MAY:
+
+- reside on different domains
+- be hosted by third parties
+- change over time
+
+The discovery document is therefore the authoritative mapping.
 
 ---
 
-## 3. Design Principles
+## 7. Transport Security
 
-### 3.1 Separation of Concerns
+### 7.1 TLS requirement
 
-| Layer | Responsibility |
-|------|---------------|
-| TEI | product identity |
-| Discovery | API endpoint authorization |
-| Transport | TLS confidentiality and integrity |
-| Trust | signatures, timestamps, transparency |
+The discovery document MUST be retrieved over HTTPS.
 
 TLS provides:
 
-- **confidentiality of discovery data in transit**  
-- **integrity protection during transport**  
-- **server authentication (WebPKI)**  
+- confidentiality
+- integrity
+- server authentication (via WebPKI)
 
-However:
+### 7.2 Important limitation
 
-> TLS MUST NOT be used as a trust anchor for TEA discovery or TEA artefact validation.
+TLS only protects the **transport session**, not long-term trust.
 
-All trust decisions MUST be based on:
+Therefore:
 
-- signatures  
-- timestamps  
-- transparency evidence  
-- trust-anchor validation (DNS or PKIX depending on model)
+> TLS is necessary but not sufficient for trust in TEA.
 
 ---
 
-### 3.2 Identity Model
+## 8. Trust Models
 
-- public key = identity  
-- certificate = validity wrapper  
-- DNS publishes TEA-native certificates  
-- SAN binds key to DNS namespace  
+TEA supports multiple trust models.
 
----
+### 8.1 Base TEA
 
-### 3.3 Manufacturer Domain Control
+- relies on TLS
+- optional signatures
+- no strict long-term validation requirements
 
-The manufacturer domain:
+### 8.2 TEA Trust Architecture
 
-- anchors TEI  
-- hosts discovery  
-- defines authorized API endpoints  
-- controls delegation  
+- requires signed discovery documents
+- requires timestamps
+- may include transparency evidence
+- enables long-term validation
 
----
+### 8.3 WebPKI considerations
 
-## 4. Discovery Endpoint
+Even in WebPKI mode:
 
-```
-https://<manufacturer-domain>/.well-known/tea
-```
+- DNS MAY include CAA records
+- DNS MAY be DNSSEC protected
 
-Requirements:
-
-- TLS MUST be used  
-- TLS MUST be validated  
-
-However:
-
-> TLS alone MUST NOT establish trust in discovery content
-
-The discovery document itself MUST be cryptographically validated.
+This strengthens trust in certificate issuance.
 
 ---
 
-## 5. Trust Layers
+## 9. Discovery Signatures and Evidence
 
-### 5.1 TEI Trust
+### 9.1 Optional in base TEA
 
-TEI provides:
+Discovery documents MAY include:
 
-- starting point for discovery  
-- binding to manufacturer domain  
+- detached signatures
+- evidence bundles
 
-TEI itself is not signed. Trust derives from:
+### 9.2 Required in TEA Trust Architecture
 
-- domain control  
-- subsequent discovery validation  
+In TEA with the Trust Architecture:
 
----
+- discovery documents SHOULD be signed
+- discovery MUST include a timestamp
+- evidence bundles SHOULD be provided
 
-### 5.2 Discovery Trust
+### 9.3 Evidence bundle structure
 
-Discovery establishes:
+The evidence bundle contains:
 
-- authorized TEA API endpoints  
-
-Based on:
-
-- signature (**MUST**)  
-- timestamp (**MUST**)  
-- certificate validation  
-- optional transparency  
+- signature
+- certificate (containing public key)
+- timestamp evidence
+- optional transparency log inclusion proof
 
 ---
 
-### 5.3 Transport Trust
+## 10. Timestamp Semantics
 
-TLS provides:
+### 10.1 Requirement
 
-- confidentiality  
-- integrity  
-- server authentication  
+In TEA with the Trust Architecture:
 
----
+> Discovery responses MUST include a signed timestamp.
 
-### 5.4 TEA Artefact Trust
+### 10.2 What a timestamp proves
 
-Handled separately via:
+A timestamp proves:
 
-- TEA collections  
-- TEA artefacts  
-- evidence bundles  
+- the discovery document existed at a specific point in time
+- the signature existed at that time
 
----
+### 10.3 Trust model
 
-## 6. Trust Models
+Timestamps rely on:
 
-### 6.1 WebPKI
+- trusted timestamp authorities (TSAs)
+- cryptographic binding to the signed content
 
-- PKIX validation  
-- DNS MUST NOT be used as a trust anchor  
-- DNS MAY strengthen validation via CAA  
+### 10.4 Rationale
 
----
+Timestamps:
 
-### 6.2 TEA-Native (TAPS)
-
-- self-signed certificate  
-- DNS publication REQUIRED  
-- DNSSEC OPTIONAL  
-- fingerprint-derived SAN REQUIRED  
+- prevent backdating attacks
+- support long-term validation
+- provide temporal ordering of discovery states
 
 ---
 
-### 6.3 Removed Model
+## 11. Transparency Logs
 
-The previously proposed two-layer TEA-native model is removed.
+### 11.1 Optional mechanism
 
-Rationale:
+Transparency logs MAY be used for discovery documents.
 
-- reintroduces long-lived keys  
-- increases complexity  
-- conflicts with ephemeral key design  
+Supported models include:
 
----
+- Rekor
+- Sigsum
+- SCITT
 
-## 7. DNS Trust Model (TEA-Native)
+### 11.2 What transparency provides
 
-- certificates MUST be published via DNS CERT records (PKIX)  
-- TLSA MUST NOT be used  
-- DNSSEC is OPTIONAL but recommended  
+Transparency logs provide:
 
----
+- append-only logging
+- public verifiability
+- detection of equivocation
 
-## 8. Certificate Profile
+### 11.3 Trust model
 
-- CN MUST NOT be used  
-- SAN MUST be fingerprint-derived  
-- Ed25519 REQUIRED  
-- certificate validity MUST be ≤ 1 hour  
+Trust comes from:
 
----
+- log integrity
+- inclusion proofs
+- witness models (e.g. Sigsum)
 
-## 9. Signature Model
+### 11.4 Important note
 
-Discovery MUST include:
-
-- signature  
-- timestamp  
-- optional transparency  
-
-Signature applies to canonical JSON.
+Transparency is **optional** and **profile-driven**, not mandatory.
 
 ---
 
-## 10. Canonicalization
+## 12. DNS and DNSSEC Considerations
 
-RFC 8785 (JSON Canonicalization Scheme) MUST be used.
+### 12.1 DNS role
 
----
+DNS is used for:
 
-## 11. Timestamp Requirements
+- discovery entry point
+- trust anchor publication (in TEA Trust Architecture)
+- WebPKI strengthening via CAA records
 
-Timestamp is **MANDATORY**.
+### 12.2 DNSSEC
 
-It proves:
+DNSSEC is:
 
-- the signature existed at a specific time  
-- the certificate was valid at that time  
+- OPTIONAL
+- RECOMMENDED
 
-This enables:
+DNSSEC provides:
 
-- long-term validation  
-- protection against backdating  
+- authenticated DNS responses
+- protection against DNS spoofing
 
----
+### 12.3 Limitation
 
-## 12. Transparency
+DNSSEC does not replace:
 
-OPTIONAL but RECOMMENDED.
-
-Provides:
-
-- auditability  
-- publication visibility  
-
-Supported systems:
-
-- Sigsum  
-- SCITT (future)
+- signatures
+- timestamps
+- evidence bundles
 
 ---
 
-## 13. Validation Procedures
+## 13. Validation Process
 
-### TEI → Discovery Flow
+A TEA consumer validates discovery as follows:
 
-1. parse TEI  
-2. extract domain  
-3. resolve DNS  
-4. fetch discovery  
-5. validate TLS  
-6. validate signature  
-7. validate timestamp  
-8. validate certificate  
-9. extract authorized API endpoints  
+### 13.1 Base TEA
 
----
+1. Resolve DNS
+2. Fetch discovery document over HTTPS
+3. Validate TLS certificate
+4. Parse API endpoints
 
-## 14. Validity Scope
+### 13.2 TEA Trust Architecture
 
-Discovery:
-
-- authorizes API endpoints  
-- does not establish artefact trust  
+1. Perform base TEA steps
+2. Validate discovery signature
+3. Validate timestamp
+4. Validate evidence bundle (if present)
+5. Optionally validate transparency inclusion
+6. Apply policy checks
 
 ---
 
-## 15. Security Properties
+## 14. Error Conditions
 
-- manufacturer-controlled discovery  
-- no central registry  
-- resilience to infrastructure change  
+Validation MUST fail when:
 
----
+- TLS validation fails
+- discovery document is malformed
+- signature validation fails (when required)
+- timestamp is missing or invalid
+- evidence bundle digest mismatch occurs
 
-## 16. STRIDE Summary
+Example error identifiers:
 
-| Threat | Mitigation |
-|------|-----------|
-| Spoofing | TLS + signature |
-| Tampering | signature |
-| Repudiation | timestamp |
-| Disclosure | TLS |
-| DoS | redundancy |
-| Elevation | domain separation |
+- `DISCOVERY_TLS_FAILURE`
+- `DISCOVERY_SIGNATURE_INVALID`
+- `DISCOVERY_TIMESTAMP_MISSING`
+- `DISCOVERY_EVIDENCE_DIGEST_MISMATCH`
 
 ---
 
-## 17. Error Model
+## 15. Security Considerations
 
-- INVALID_TEI  
-- DISCOVERY_SIGNATURE_INVALID  
-- DISCOVERY_TIMESTAMP_INVALID  
-- DISCOVERY_DNS_MISMATCH  
+Discovery is a critical trust boundary.
+
+Common risks include:
+
+### 15.1 Domain compromise
+
+If the authority domain is compromised:
+
+- discovery responses may be replaced
+- endpoints may be redirected
+
+Mitigation:
+
+- signatures
+- timestamps
+- transparency logs
+
+### 15.2 API endpoint substitution
+
+A malicious discovery document could point to:
+
+- attacker-controlled API endpoints
+
+Mitigation:
+
+- signed discovery
+- evidence validation
+
+### 15.3 DNS attacks
+
+Without DNSSEC:
+
+- DNS responses may be spoofed
+
+Mitigation:
+
+- DNSSEC (optional)
+- signature validation
+
+### 15.4 Trust confusion
+
+Implementers must not assume:
+
+- TLS alone is sufficient for long-term trust
+- discovery implies artifact authenticity
 
 ---
 
-## 18. Consumer Flow
+## 16. Normative References
 
-```
-TEI → domain → discovery → API endpoints → artefact validation
-```
+- RFC 2119 — Key words for use in RFCs
+- RFC 8174 — Ambiguity of uppercase/lowercase requirement terms
+- RFC 5280 — X.509 Public Key Infrastructure
+- RFC 8555 — ACME (relevant for certificate issuance context)
+- RFC 6844 — CAA Records
+- RFC 4033–4035 — DNSSEC
+- RFC 8785 — JSON Canonicalization Scheme
 
 ---
 
-## 19. Final Summary
+## 17. Informative References
 
-Discovery in TEA is a **two-step trust process**:
-
-1. TEI → manufacturer domain  
-2. discovery → authorized API endpoints  
+- TEA Trust Architecture Core Specification
+- TEA Evidence Bundle Specification
+- TEA Evidence Validation Specification
+- Rekor Transparency Log
+- Sigsum Transparency Log
+- IETF SCITT Architecture
 
 ---
 
 ## Final Statement
 
-TEI defines:
+Discovery answers the question:
 
-> **what product to look for**
+> **Where are the TEA services for this identifier?**
 
-Discovery defines:
+Trust architecture answers:
 
-> **where to find it**
+> **Can those answers be trusted over time?**
 
-TEA trust architecture defines:
-
-> **why it can be trusted**
+Both are required for a complete TEA system.
