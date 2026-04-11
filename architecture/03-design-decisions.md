@@ -1,851 +1,575 @@
-# 📘 TEA Trust Architecture — Design Decisions
+# 📘 TEA Trust Architecture – Design Decisions
 **Version:** 1.0  
-**Status:** Draft (Non-Normative, Implementation-Ready)
+**Status:** Draft (Non-Normative, Authoritative Rationale)
 
 ---
 
-## 1. Purpose
+## Status
 
-This document explains the key design decisions in the TEA trust architecture.
+This document captures the **design decisions and rationale** behind the TEA Trust Architecture.
 
-It provides:
+It is **non-normative**, but authoritative. It explains:
 
-- rationale for architectural choices  
-- discussion of alternatives  
-- explanation of tradeoffs  
+- why specific technical choices were made
+- which alternatives were considered
+- what trade-offs were accepted
 
-This document is **non-normative**, but authoritative for understanding:
+This document complements:
 
-- security properties  
-- intended usage  
-- implementation expectations  
+- `spec/trust-architecture.md` (normative)
+- `spec/evidence-bundle.md`
+- `spec/evidence-validation.md`
+- `spec/collection.md`
+
+---
+
+## Table of Contents
+
+1. [Introduction](#1-introduction)  
+2. [Design Philosophy](#2-design-philosophy)  
+3. [Evidence-Centric Trust Model](#3-evidence-centric-trust-model)  
+4. [Ephemeral Keys and No Revocation](#4-ephemeral-keys-and-no-revocation)  
+5. [Ed25519-Only Decision](#5-ed25519-only-decision)  
+6. [No Key Reuse](#6-no-key-reuse)  
+7. [Certificate as Validity Wrapper](#7-certificate-as-validity-wrapper)  
+8. [Timestamp-First Trust Model](#8-timestamp-first-trust-model)  
+9. [Transparency as Optional (Profile-Driven)](#9-transparency-as-optional-profile-driven)  
+10. [Evidence Bundle as a First-Class Object](#10-evidence-bundle-as-a-first-class-object)  
+11. [Artifact-Centric Evidence Reuse](#11-artifact-centric-evidence-reuse)  
+12. [Collection vs Artifact Trust Separation](#12-collection-vs-artifact-trust-separation)  
+13. [SHA-256 as the Single Digest Algorithm](#13-sha-256-as-the-single-digest-algorithm)  
+14. [JSON Canonicalization Requirement](#14-json-canonicalization-requirement)  
+15. [DNS as Trust Anchor Distribution (TAPS)](#15-dns-as-trust-anchor-distribution-taps)  
+16. [Discovery Trust Separation](#16-discovery-trust-separation)  
+17. [Multipart Delivery Model](#17-multipart-delivery-model)  
+18. [CI/CD and Gated Publication](#18-cicd-and-gated-publication)  
+19. [Long-Term Validation and CRA Alignment](#19-long-term-validation-and-cra-alignment)  
+20. [Rejected Alternatives](#20-rejected-alternatives)  
+21. [Summary of Key Decisions](#21-summary-of-key-decisions)  
+
+---
+
+## 1. Introduction
+
+The TEA Trust Architecture was designed to solve a specific problem:
+
+> How can software artifacts be validated reliably **10+ years after publication**, even if:
+> - keys are gone  
+> - services are offline  
+> - organizations no longer exist  
+
+Traditional PKI models do not solve this problem well.
+
+TEA therefore adopts a different approach:
+
+> **Trust is derived from durable evidence, not long-lived keys.**
 
 ---
 
 ## 2. Design Philosophy
 
-The TEA trust architecture is built on the following principles:
+The architecture is guided by a few core principles:
 
-1. **Trust must be verifiable, not assumed**  
-2. **No single component should be trusted completely**  
-3. **Operational simplicity is a security feature**  
-4. **Long-term validation must not depend on long-term private key protection**  
-5. **Trust must survive infrastructure and organizational change**  
+### 2.1 Minimize long-term secrets
+Private keys should exist only briefly.
+
+### 2.2 Maximize verifiability
+All trust decisions should be independently reproducible.
+
+### 2.3 Avoid centralized dependencies
+No single service should be required for validation.
+
+### 2.4 Prefer simple invariants
+Fewer algorithms, fewer options, fewer ambiguities.
+
+### 2.5 Separate concerns clearly
+- artifact authenticity  
+- release composition  
+- discovery  
+must not be conflated.
 
 ---
 
-## 3. Separation of Discovery and Artefact Trust
+## 3. Evidence-Centric Trust Model
 
 ### Decision
 
-Discovery authorization and TEA artefact trust are explicitly separated.
-
----
+Trust is based on **evidence bundles**, not certificates.
 
 ### Rationale
 
-Discovery answers:
+Certificates alone cannot provide:
 
-> “Where should I connect?”
+- long-term verifiability  
+- proof of existence in time  
+- protection against backdating  
 
-TEA artefact validation answers:
+Evidence bundles combine:
 
-> “Can I trust this data?”
+- signature  
+- certificate  
+- timestamp  
+- transparency  
 
-These are fundamentally different security questions.
+### Consequence
 
-Discovery is part of **trust bootstrap**, while artefact validation is part of **trust establishment**.
-
----
-
-### Tradeoff
-
-- increased implementation complexity  
-- two validation flows  
+Validation always operates on a **complete set of evidence**, not a single artifact.
 
 ---
 
-### Rejected Alternative
-
-Single-layer model where API endpoints are implicitly trusted.
-
----
-
-### Reason for Rejection
-
-This would make:
-
-- infrastructure compromise  
-- API compromise  
-
-equivalent to **trust compromise**, which is unacceptable.
-
----
-
-## 4. TEI as the Root of Discovery
+## 4. Ephemeral Keys and No Revocation
 
 ### Decision
 
-The **Transparency Exchange Identifier (TEI)** is the starting point for discovery.
-
----
+- Certificates have lifetime **< 1 hour**
+- Revocation is not used
 
 ### Rationale
 
-TEI provides:
+Revocation systems:
 
-- a **manufacturer-controlled namespace**  
-- decentralized identification  
-- reuse of existing identifiers  
-- independence from central registries  
+- do not scale over long time  
+- introduce availability dependencies  
+- are frequently ignored in practice  
 
-Discovery becomes:
+Short-lived keys eliminate the need for revocation.
 
-```
-TEI → manufacturer domain → discovery → API endpoints
-```
+### Trade-off
 
----
-
-### Tradeoff
-
-- requires TEI parsing and resolution logic  
+- Requires strong timestamping
+- Requires strict workflow control
 
 ---
 
-### Rejected Alternative
-
-Direct use of URLs without a stable identifier layer.
-
----
-
-### Reason for Rejection
-
-This would:
-
-- couple identity to infrastructure  
-- reduce portability  
-- weaken long-term stability  
-
----
-
-## 5. Public Key as Identity
+## 5. Ed25519-Only Decision
 
 ### Decision
 
-The **public key is the identity**.
-
-Certificates are wrappers, not identity sources.
-
----
+Only **Ed25519** is allowed.
 
 ### Rationale
 
-This:
+- small key size (important for DNS)
+- fast signing and verification
+- deterministic behavior
+- alignment with Sigsum
 
-- avoids dependence on CA naming  
-- removes ambiguity in subject fields  
-- simplifies trust reasoning  
-- enables future format flexibility  
+### Trade-off
 
----
+- excludes RSA and other algorithms
+- reduces flexibility
 
-### Tradeoff
+### Why this is acceptable
 
-- explicit trust anchor handling required  
-- identity derived from cryptographic material  
+TEA prioritizes:
 
----
-
-### Rejected Alternative
-
-Identity based on:
-
-- certificate subject  
-- issuer hierarchy  
+> interoperability and simplicity over algorithm diversity
 
 ---
 
-### Reason for Rejection
-
-These approaches:
-
-- mix naming and trust  
-- introduce ambiguity  
-- are error-prone  
-
----
-
-## 6. Fingerprint-Derived SAN Names
+## 6. No Key Reuse
 
 ### Decision
 
-TEA-native certificates use fingerprint-derived SAN DNS names:
-
-```
-<fingerprint>.<trust-domain>
-```
-
-Optional persistence:
-
-```
-<fingerprint>.<persistence-domain>
-```
-
----
+A key pair MUST NOT be reused.
 
 ### Rationale
 
-Provides:
+Key reuse introduces:
 
-- deterministic identity binding  
-- strong key-to-DNS linkage  
-- simple validation logic  
+- correlation risks  
+- extended attack windows  
+- ambiguity in trust evaluation  
 
----
+### Consequence
 
-### Tradeoff
+Each signing event is:
 
-- less human-readable names  
-- requires fingerprint computation  
-
----
-
-### Rejected Alternative
-
-Arbitrary SAN naming.
+- isolated  
+- independently verifiable  
 
 ---
 
-### Reason for Rejection
-
-Weakens identity binding and introduces ambiguity.
-
----
-
-## 7. Use of X.509 as Wrapper
+## 7. Certificate as Validity Wrapper
 
 ### Decision
 
-X.509 is used as a **transport and metadata wrapper**, not identity.
-
----
+Certificates are not identities. They are **validity wrappers**.
 
 ### Rationale
 
-Provides:
+Identity is derived from:
 
-- widespread tooling support  
-- validity intervals  
-- compatibility with TSA and transparency  
+- DNS anchoring
+- public key fingerprint
 
----
+The certificate only defines:
 
-### Tradeoff
+- validity period
+- binding context
 
-- inherits PKI complexity  
-- requires strict interpretation rules  
+### Consequence
 
----
-
-### Rejected Alternative
-
-Raw public keys only.
+- certificates can be short-lived
+- identity persists independently
 
 ---
 
-### Reason for Rejection
-
-Lacks:
-
-- validity metadata  
-- interoperability  
-- standardized structure  
-
----
-
-## 8. Subject Naming for Accountability
+## 8. Timestamp-First Trust Model
 
 ### Decision
 
-Subject fields provide **accountability metadata**, not identity.
-
----
+Timestamps are mandatory in the trust architecture.
 
 ### Rationale
 
-Separates:
+Without timestamps:
 
-- identity → public key  
-- accountability → subject O  
+- signatures can be backdated  
+- ordering cannot be established  
+- long-term validation breaks  
 
----
+### Trust basis
 
-### Rule
+Trust in time is derived from:
 
-If legal entity exists:
-
-- subject O SHOULD contain legal name  
-
----
-
-### Tradeoff
-
-- requires careful implementation discipline  
+- TSA signatures  
+- cross-verification (multiple TSAs)
 
 ---
 
-### Rejected Alternative
-
-Subject-based identity.
-
----
-
-### Reason for Rejection
-
-Introduces ambiguity and weak trust guarantees.
-
----
-
-## 9. Ephemeral Keys
+## 9. Transparency as Optional (Profile-Driven)
 
 ### Decision
 
-Use **ephemeral or short-lived signing keys**.
-
----
+Transparency logs are **optional**, not mandatory.
 
 ### Rationale
 
-Benefits:
+Different environments require different trade-offs:
 
-- minimal key exposure window  
-- no long-term key storage  
-- no revocation dependency  
-- simplified CI/CD  
+- some need full public transparency
+- others require controlled disclosure
 
----
+### Supported systems
 
-### Tradeoff
+- Rekor  
+- Sigsum  
+- SCITT  
 
-- frequent key generation  
-- reliance on timestamps  
+### Consequence
 
----
+Profiles define:
 
-### Rejected Alternative
-
-Long-lived signing keys.
+- whether transparency is required  
+- how it is validated  
 
 ---
 
-### Reason for Rejection
-
-High-value targets and operational risk.
-
----
-
-## 10. Short-Lived Certificates
+## 10. Evidence Bundle as a First-Class Object
 
 ### Decision
 
-Certificates MUST be **≤ 1 hour**.
-
----
+The evidence bundle is explicitly modeled and stored.
 
 ### Rationale
 
-- eliminates need for revocation  
-- limits compromise window  
-- aligns with ephemeral keys  
+Previously, systems treated:
+
+- signatures  
+- timestamps  
+- logs  
+
+as separate concerns.
+
+This leads to:
+
+- fragmentation  
+- incomplete validation  
+
+### Consequence
+
+All trust material is grouped into a single object.
 
 ---
 
-### Tradeoff
-
-- frequent issuance required  
-- requires timestamp support  
-
----
-
-### Rejected Alternative
-
-Revocation-based lifecycle.
-
----
-
-### Reason for Rejection
-
-CRL/OCSP are:
-
-- unreliable  
-- inconsistently enforced  
-- operationally complex  
-
----
-
-## 11. DNS Publication (TAPS)
+## 11. Artifact-Centric Evidence Reuse
 
 ### Decision
 
-TEA-native trust anchors MUST be published in DNS.
+Evidence bundles are reusable **only for artifacts**.
+
+### Rationale
+
+Artifacts are immutable content.
+
+Collections are contextual statements.
+
+### Consequence
+
+- artifact evidence can be reused across collections  
+- collection evidence cannot  
 
 ---
+
+## 12. Collection vs Artifact Trust Separation
+
+### Decision
+
+Collection trust and artifact trust are separate.
+
+### Rationale
+
+A collection states:
+
+> "these artifacts belong together"
+
+It does not prove:
+
+> "these artifacts are authentic"
+
+### Consequence
+
+Validation must check:
+
+- artifact evidence  
+- collection integrity  
+
+independently.
+
+---
+
+## 13. SHA-256 as the Single Digest Algorithm
+
+### Decision
+
+Only **SHA-256** is allowed.
+
+### Rationale
+
+- avoids downgrade attacks  
+- simplifies implementations  
+- ensures interoperability  
+
+### Trade-off
+
+- no algorithm agility  
+
+### Future consideration
+
+Algorithm agility may be introduced in future versions if required.
+
+---
+
+## 14. JSON Canonicalization Requirement
+
+### Decision
+
+JSON objects MUST use RFC 8785 canonicalization for hashing.
+
+### Rationale
+
+JSON is not inherently stable:
+
+- field order varies  
+- whitespace varies  
+
+Without canonicalization:
+
+- digests are unreliable  
+
+---
+
+## 15. DNS as Trust Anchor Distribution (TAPS)
+
+### Decision
+
+Trust anchors are distributed via DNS (CERT records).
 
 ### Rationale
 
 DNS provides:
 
 - global distribution  
-- domain binding  
-- interoperability  
+- independence from APIs  
+- compatibility with existing infrastructure  
+
+### DNSSEC
+
+- optional  
+- recommended  
+
+### Trade-off
+
+- DNS is not universally secured  
+- requires additional validation layers  
 
 ---
 
-### Tradeoff
-
-- DNS availability dependency  
-- requires consumer validation logic  
-
----
-
-### Rejected Alternative
-
-No DNS publication.
-
----
-
-### Reason for Rejection
-
-Removes shared trust anchor distribution mechanism.
-
----
-
-## 12. DNSSEC as Optional
+## 16. Discovery Trust Separation
 
 ### Decision
 
-DNSSEC is optional.
-
----
+Discovery trust is separate from artifact trust.
 
 ### Rationale
 
-- increases deployability  
-- avoids adoption barriers  
+Discovery answers:
+
+> where to go
+
+Artifact evidence answers:
+
+> what to trust
+
+### Consequence
+
+Both must be validated independently.
 
 ---
 
-### Tradeoff
-
-- DNS may be unauthenticated  
-
----
-
-### Rejected Alternative
-
-Mandatory DNSSEC.
-
----
-
-### Reason for Rejection
-
-Too restrictive for real-world deployment.
-
----
-
-## 13. Persistence Domains
+## 17. Multipart Delivery Model
 
 ### Decision
 
-Optional second SAN for persistence domains.
+Artifacts may be delivered with:
 
----
+- no evidence  
+- detached signature  
+- full evidence bundle  
 
 ### Rationale
 
 Supports:
 
-- bankruptcy  
-- acquisition  
-- long-term verification  
+- backward compatibility  
+- progressive adoption  
 
 ---
 
-### Tradeoff
-
-- additional coordination  
-
----
-
-### Rejected Alternative
-
-Single-domain dependence.
-
----
-
-### Reason for Rejection
-
-Fragile long-term model.
-
----
-
-## 14. Canonical JSON (RFC 8785)
+## 18. CI/CD and Gated Publication
 
 ### Decision
 
-Use RFC 8785 (JCS).
+Workflow is split:
 
----
+- CI/CD prepares artifacts  
+- commit phase finalizes release  
 
 ### Rationale
 
-- deterministic signing  
-- interoperability  
+Fully automated publication introduces risk:
+
+- key misuse  
+- incomplete validation  
+- policy bypass  
+
+### Consequence
+
+Final release requires:
+
+- human approval  
+- strict validation  
 
 ---
 
-### Tradeoff
-
-- strict implementation required  
-
----
-
-## 15. Signature Models
+## 19. Long-Term Validation and CRA Alignment
 
 ### Decision
 
-Support:
-
-- detached signatures  
-- inline signatures  
-
----
+Architecture explicitly supports **≥10 year validation**.
 
 ### Rationale
 
-- flexibility  
-- format compatibility  
+CRA requires:
+
+- long-term availability  
+- verifiable integrity  
+
+### How TEA achieves this
+
+- timestamps provide temporal proof  
+- evidence bundles preserve validation context  
+- no dependency on revocation  
 
 ---
 
-### Tradeoff
+## 20. Rejected Alternatives
 
-- multiple validation paths  
+### 20.1 Long-lived certificates
 
----
+Rejected because:
 
-## 16. Transparency Logs
-
-### Decision
-
-Transparency is REQUIRED in TEA-native trust models.
+- require revocation  
+- increase attack surface  
 
 ---
 
-### Rationale
+### 20.2 Multiple algorithms
 
-Provides:
+Rejected because:
 
-- auditability  
-- tamper detection  
-- public visibility  
-
----
-
-### Tradeoff
-
-- dependency on external systems  
+- increases complexity  
+- introduces downgrade risks  
 
 ---
 
-### Rejected Alternative
+### 20.3 Signature-only model
 
-No transparency.
+Rejected because:
 
----
-
-### Reason for Rejection
-
-Weakens auditability and detection.
+- lacks time proof  
+- lacks auditability  
 
 ---
 
-## 17. Timestamp as Trust Anchor
+### 20.4 Mandatory transparency
 
-### Decision
+Rejected because:
 
-Timestamps are **mandatory trust anchors**.
-
----
-
-### Rationale
-
-They prove:
-
-- when a signature existed  
-- that the certificate was valid  
-
-This is critical for:
-
-- short-lived certificates  
-- long-term validation  
+- not suitable for all environments  
 
 ---
 
-### Tradeoff
+### 20.5 Embedding evidence in collections
 
-- TSA dependency  
-- validation complexity  
+Rejected because:
 
----
-
-### Additional Decision
-
-Use multiple TSAs when possible.
+- prevents reuse  
+- increases duplication  
+- complicates validation  
 
 ---
 
-## 18. Long-Term Validation Model
-
-### Decision
-
-Long-term validation relies on:
-
-- timestamps  
-- preserved evidence  
-- CA/TSA chains  
-
----
-
-### Rationale
-
-Allows:
-
-- ephemeral keys  
-- durable verification  
-
----
-
-### Tradeoff
-
-- archival requirements  
-
----
-
-## 19. Discovery Signing
-
-### Decision
-
-Discovery MUST be:
-
-- signed  
-- timestamped  
-
----
-
-### Rationale
-
-Discovery is the **trust bootstrap**.
-
----
-
-### Tradeoff
-
-- additional implementation effort  
-
----
-
-### Rejected Alternative
-
-Unsigned discovery.
-
----
-
-### Reason for Rejection
-
-Weakens endpoint authorization.
-
----
-
-## 20. No Central Authority
-
-### Decision
-
-No central trust registry.
-
----
-
-### Rationale
-
-- decentralization  
-- resilience  
-- independence  
-
----
-
-### Tradeoff
-
-- explicit trust handling required  
-
----
-
-## 21. Multiple Trust Models
-
-### Decision
-
-Support:
-
-- TEA-native (TAPS)  
-- WebPKI  
-
----
-
-### Rationale
-
-Covers:
-
-- decentralized trust  
-- enterprise integration  
-
----
-
-### Tradeoff
-
-- dual validation paths  
-
----
-
-## 22. Service Provider Independence
-
-### Decision
-
-Service providers are NOT trust anchors.
-
----
-
-### Rationale
-
-- supports outsourcing  
-- preserves trust independence  
-
----
-
-## 23. Dual-Level Signing
-
-### Decision
-
-Separate:
-
-- TEA artefact signatures  
-- TEA collection signatures  
-
----
-
-### Rationale
-
-Prevents:
-
-- misuse of artefacts  
-- release forgery  
-
----
-
-## 24. Time Validation Strategy
-
-### Decision
-
-Use bounded drift, not perfect time.
-
----
-
-### Rationale
-
-- realistic  
-- robust  
-
----
-
-## 25. Avoidance of GPG
-
-### Decision
-
-GPG is not used.
-
----
-
-### Rationale
-
-- poor CI/CD fit  
-- unclear trust model  
-
----
-
-## 26. Future-Proof Wrappers
-
-### Decision
-
-Support future formats:
-
-- COSE  
-- CBOR  
-
----
-
-### Rationale
-
-- flexibility  
-- evolution  
-
----
-
-## 27. Operational Simplicity
-
-### Decision
-
-Favor simple designs.
-
----
-
-### Rationale
-
-- fewer errors  
-- broader adoption  
-
----
-
-## 28. CRA Alignment
-
-### Decision
-
-Focus on lifecycle validation.
-
----
-
-### Rationale
-
-Supports:
-
-- long-term evidence  
-- auditability  
-- compliance  
-
----
-
-## 29. Final Design Summary
-
-The TEA trust architecture:
-
-- minimizes long-lived secrets  
-- separates trust domains  
-- uses public key identity  
-- anchors trust in timestamps and transparency  
-- supports decentralized validation  
-- enables long-term verification  
+## 21. Summary of Key Decisions
+
+| Area | Decision |
+|------|----------|
+| Keys | Ephemeral, no reuse |
+| Algorithm | Ed25519 only |
+| Digests | SHA-256 only |
+| Trust | Evidence-based |
+| Timestamp | Mandatory |
+| Transparency | Optional |
+| Evidence | First-class object |
+| DNS | Trust anchor distribution |
+| Workflow | Gated publication |
 
 ---
 
 ## Final Statement
 
-> Trust in TEA does not depend on who operates the system  
-> but on what can be independently verified over time.
+The TEA Trust Architecture deliberately trades:
+
+- flexibility  
+- legacy compatibility  
+
+for:
+
+> **clarity, simplicity, and long-term verifiability**
+
+The result is a system where:
+
+- trust can be evaluated independently  
+- validation can be performed offline  
+- and software integrity can be proven long after publication.
