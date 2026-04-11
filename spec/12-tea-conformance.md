@@ -1,355 +1,343 @@
-# TEA Conformance and Validation Specification
+# 📘 TEA Trust Architecture — Conformance Specification
+**Version:** 1.0  
+**Status:** Draft (Normative, Implementation-Ready)
 
-Version: 1.0
-Status: Draft
-Applies to: TEI, Discovery, TEA APIs, Trust Architecture
+---
 
 ## Status
 
-This document is normative.
+This document defines **conformance requirements** for implementations of the TEA Trust Architecture.
 
-It defines conformance requirements and validation behavior
-across all components of the TEA architecture, including:
+It specifies:
 
-- TEI
-- Discovery
-- TEA APIs
-- Trust Architecture
+- mandatory behaviors  
+- validation requirements  
+- publication requirements  
+- cryptographic constraints  
 
-All conforming TEA implementations MUST satisfy the requirements
-defined in this specification according to their declared profile.
-⸻
+The key words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** are to be interpreted as described in:
 
-1. Introduction
+- RFC 2119  
+- RFC 8174  
 
-The Transparency Exchange API (TEA) defines a modular architecture for software transparency consisting of:
-	•	TEI for identification
-	•	Discovery for service location
-	•	TEA APIs for artefact access
-	•	Trust Architecture for validation
+This document is normative for:
 
-This document defines how these components are used together in practice.
+- TEA consumers  
+- TEA publishers  
+- TEA services  
 
-Specifically, it provides:
-	•	Conformance requirements for producers and consumers
-	•	Validation behavior across the TEA lifecycle
-	•	Minimum acceptable security and trust handling
+---
 
-The goal is to ensure that independent implementations behave consistently and can interoperate reliably.
+## Table of Contents
 
-⸻
+1. [Purpose](#1-purpose)  
+2. [Scope](#2-scope)  
+3. [Conformance Levels](#3-conformance-levels)  
+4. [Cryptographic Requirements](#4-cryptographic-requirements)  
+5. [Certificate Requirements](#5-certificate-requirements)  
+6. [Key Management Requirements](#6-key-management-requirements)  
+7. [Evidence Bundle Requirements](#7-evidence-bundle-requirements)  
+8. [Validation Requirements](#8-validation-requirements)  
+9. [Transparency Requirements](#9-transparency-requirements)  
+10. [Publication Requirements](#10-publication-requirements)  
+11. [API Requirements](#11-api-requirements)  
+12. [Error Handling](#12-error-handling)  
+13. [Security Requirements](#13-security-requirements)  
+14. [Normative References](#14-normative-references)  
+15. [Final Statement](#15-final-statement)  
 
-2. Scope and Relationships
+---
 
-This specification builds on, but does not replace:
+## 1. Purpose
 
-Area	Specification
-Identifier	spec/tei.md
-Discovery	spec/discovery/readme.md
-APIs	spec/publisher/ and spec/consumer/
-Trust	spec/trust-architecture.md
+This specification defines the **minimum required behavior** for TEA Trust Architecture implementations.
 
-This document defines how these specifications are applied together, not their internal structure.
+It ensures:
 
-⸻
+- interoperability  
+- predictable validation outcomes  
+- consistent security guarantees  
 
-3. Conformance Roles
+---
 
-3.1 Producer
+## 2. Scope
 
-A TEA Producer:
-	•	assigns TEIs
-	•	publishes discovery documents
-	•	exposes TEA endpoints
-	•	provides artefacts
+Applies to:
 
-⸻
+- TEA consumers (validators)  
+- TEA publishers (release systems)  
+- TEA services (APIs)  
 
-3.2 Consumer
+---
 
-A TEA Consumer:
-	•	accepts TEIs
-	•	performs discovery
-	•	retrieves artefacts
+## 3. Conformance Levels
 
-⸻
+### 3.1 Minimal
 
-3.3 Trust-Aware Consumer
+- signature validation  
+- certificate validation  
 
-A Trust-Aware Consumer additionally:
-	•	validates signatures
-	•	validates timestamps
-	•	verifies transparency evidence
-	•	resolves DNS trust anchors (TAPS)
+---
 
-⸻
+### 3.2 TEA-Native
 
-4. Conformance Profiles
+- timestamp REQUIRED  
+- transparency SHOULD  
 
-TEA defines three conformance profiles to support incremental adoption.
+---
 
-⸻
+### 3.3 High Assurance
 
-4.1 Profile L1 — Basic Interoperability
+- timestamp REQUIRED  
+- transparency REQUIRED  
+- multiple evidence sources REQUIRED  
 
-A conforming implementation:
-	•	MUST accept syntactically valid TEIs
-	•	MUST treat TEIs as opaque identifiers
-	•	MUST perform discovery via .well-known/tea
-	•	MUST select at least one valid endpoint
-	•	MUST retrieve artefacts
+---
 
-This profile ensures basic interoperability.
+## 4. Cryptographic Requirements
 
-⸻
+Implementations MUST use:
 
-4.2 Profile L2 — Secure Retrieval
+### 4.1 Signature Algorithm
 
-In addition to L1:
-	•	MUST use HTTPS for all communications
-	•	MUST validate TLS using WebPKI
-	•	MUST process discovery documents according to schema
-	•	SHOULD support multiple endpoints and selection logic
+```text
+Ed25519
+```
 
-This profile ensures secure transport and structured interaction.
+- RFC 8032  
+- RFC 8410  
 
-⸻
+---
 
-4.3 Profile L3 — Trust-Aware Validation
+### 4.2 Hash Algorithm
 
-In addition to L2:
-	•	MUST validate artefact signatures
-	•	MUST validate timestamps
-	•	MUST validate trust anchors (TAPS) when applicable
-	•	MUST process transparency evidence when present
-	•	MUST fail closed on validation errors
+```text
+SHA-256
+```
 
-This profile aligns with CRA-grade validation expectations.
+- RFC 6234  
 
-⸻
+---
 
-5. TEI Handling Requirements
+### 4.3 Prohibited Algorithms
 
-Consumers:
-	•	MUST treat TEIs as opaque
-	•	MUST NOT parse <encoded-id>
-	•	MUST NOT depend on <type> semantics
-	•	MUST NOT reject TEIs due to unknown <type>
+Any other algorithms:
 
-Consumers MAY:
-	•	decode identifiers for display
-	•	interpret known types for enrichment
+> MUST NOT be accepted  
 
-Such behavior MUST remain optional.
+---
 
-⸻
+## 5. Certificate Requirements
 
-6. Discovery Processing
+Certificates MUST:
 
-6.1 Retrieval
+- conform to RFC 5280  
+- contain Ed25519 public key  
+- have validity ≤ 1 hour  
+- include SAN DNS entries  
 
-Consumers:
-	•	MUST retrieve https://<authority>/.well-known/tea
-	•	MUST use HTTPS
-	•	MUST validate TLS
+Certificates MUST NOT:
 
-⸻
+- rely on CN for identity  
 
-6.2 Interpretation
+---
 
-Consumers:
-	•	MUST process required fields
-	•	MUST ignore unknown fields
-	•	MUST support schema evolution
+## 6. Key Management Requirements
 
-⸻
+### 6.1 Single-Use Keys
 
-6.3 Failure Handling
+A key pair MUST:
 
-If discovery fails:
-	•	MUST retry (configurable)
-	•	MAY use cached discovery data
-	•	MUST NOT assume success
+- be used for a single signing event  
+- NOT be reused  
 
-⸻
+---
 
-7. Endpoint Selection
+### 6.2 Fingerprint Uniqueness
 
-When multiple endpoints are present:
+Fingerprint:
 
-Consumers:
-	•	MUST filter endpoints by supported trust model
-	•	MUST evaluate both global and per-endpoint trustModelsSupported
-	•	SHOULD consider priority
-	•	MUST allow local policy override
+```text
+SHA-256(public key)
+```
 
-Consumers MUST NOT assume:
-	•	all endpoints are equivalent
-	•	all endpoints support all trust models
+MUST NOT be reused.
 
-⸻
+---
 
-8. Trust Model Selection
+### 6.3 Enforcement
 
-Consumers MUST select a trust model based on:
-	•	local policy
-	•	discovery document
-	•	endpoint capabilities
+Publishers MUST:
 
-If multiple models are available:
-	•	SHOULD prefer stronger models (e.g., TAPS)
-	•	MUST allow local override
+- track used fingerprints  
+- reject reuse  
 
-⸻
+---
 
-9. Artefact Retrieval
+## 7. Evidence Bundle Requirements
 
-Consumers:
-	•	MUST use the selected endpoint
-	•	MUST use HTTPS
-	•	MUST validate TLS
+Evidence bundles MUST include:
 
-⸻
+- signature  
+- certificate  
+- timestamp  
 
-10. Trust Validation
+Transparency:
 
-10.1 General
+- OPTIONAL (Minimal)  
+- SHOULD (TEA-native)  
+- REQUIRED (High Assurance)  
 
-If trust validation is enabled:
-	•	MUST be applied consistently
-	•	MUST produce a clear validation outcome
+---
 
-⸻
+## 8. Validation Requirements
 
-10.2 WebPKI Model
+Validators MUST:
 
-Consumers:
-	•	MUST validate TLS chain
-	•	MUST NOT expect additional evidence
+- verify signature  
+- verify certificate  
+- verify timestamp  
+- verify binding chain  
 
-⸻
+---
 
-10.3 TAPS Model
+### 8.1 Binding Enforcement
 
-Consumers:
-	•	MUST resolve trust anchors via DNS
-	•	MUST validate signatures
-	•	MUST validate timestamps
-	•	MUST verify transparency inclusion
+All bindings MUST match:
 
-⸻
+```text
+artifact → signature → timestamp → transparency
+```
 
-11. Validation Outcomes
+---
 
-Validation MUST produce one of:
+### 8.2 Algorithm Enforcement
 
-Outcome	Meaning
-VALID	All required checks passed
-INVALID	A required check failed
-INDETERMINATE	Validation could not be completed
+Non-compliant algorithms:
 
+> MUST fail validation  
 
-⸻
+---
 
-11.1 Required Behavior
-	•	L3 consumers MUST fail closed on INVALID
-	•	MAY allow INDETERMINATE based on policy
-	•	MUST log outcomes
+## 9. Transparency Requirements
 
-⸻
+Supported systems:
 
-12. Error Handling
+- Sigsum (RECOMMENDED)  
+- Rekor (ALLOWED)  
+- SCITT (FUTURE)  
 
-Consumers MUST define behavior for:
-	•	discovery failure
-	•	endpoint unavailability
-	•	signature failure
-	•	timestamp inconsistency
-	•	trust anchor mismatch
+---
 
-⸻
+### 9.1 If Present
 
-13. Logging and Auditability
+Validators MUST:
 
-Consumers SHOULD log:
-	•	TEI processed
-	•	discovery result
-	•	endpoint selected
-	•	trust model selected
-	•	validation outcome
+- verify inclusion proof  
+- verify signed log state  
 
-This supports:
-	•	compliance verification
-	•	incident analysis
-	•	long-term audit
+---
 
-⸻
+### 9.2 If Required
 
-14. Security Considerations
+Missing transparency:
 
-This specification enforces:
-	•	HTTPS-only communication
-	•	TLS validation
-	•	separation of transport and artefact trust
-	•	optional DNSSEC protection
+> MUST fail validation  
 
-⸻
+---
 
-15. CRA Alignment
+## 10. Publication Requirements
 
-Profile L3 supports:
-	•	pre-purchase transparency
-	•	long-term validation
-	•	lifecycle traceability
+### 10.1 Commit Control
 
-⸻
+Publication MUST:
 
-16. Conformance Summary
+- require explicit authorization  
+- enforce commit step  
 
-Profile	Capability
-L1	TEI resolution and artefact retrieval
-L2	Secure communication and structured discovery
-L3	Full trust validation and auditability
+---
 
+### 10.2 Evidence Completeness
 
-⸻
+Publishers MUST:
 
-17. Implementation Guidance
+- attach complete evidence bundle  
+- verify before publication  
 
-Implementations SHOULD:
-	•	adopt L2 as a baseline
-	•	adopt L3 for regulated environments
-	•	support gradual upgrade paths
+---
 
-⸻
+### 10.3 Key Enforcement
 
-✅ Result
+Publishers MUST:
 
-This document now:
-	•	Fits cleanly into your existing TEA doc bundle
-	•	Uses the same tone and layering model
-	•	Connects all components without redefining them
-	•	Provides a normative behavioral contract
+- reject reused keys  
+- ensure key deletion after use  
 
-⸻
+---
 
-🚀 Optional Next Step
+## 11. API Requirements
 
-If you want to go one level further toward standardization:
+APIs MUST support:
 
-👉 Add:
+- artifact retrieval  
+- evidence bundle retrieval  
+- multipart responses  
 
-spec/conformance/test-suite.md
+---
 
-Containing:
-	•	concrete TEIs
-	•	sample discovery docs
-	•	expected validation outcomes
+### 11.1 Supported Formats
 
-That would make TEA:
+- artifact only  
+- artifact + signature  
+- artifact + evidence bundle  
 
-not just a spec — but a verifiable ecosystem
+---
 
-⸻
+## 12. Error Handling
 
-If you want, I can generate that test suite next.
+Implementations MUST fail if:
+
+- signature invalid  
+- certificate invalid  
+- timestamp invalid  
+- binding mismatch  
+- unsupported algorithm  
+
+---
+
+## 13. Security Requirements
+
+Implementations MUST:
+
+- enforce fail-closed validation  
+- minimize key lifetime  
+- support offline validation  
+
+---
+
+## 14. Normative References
+
+- RFC 2119  
+- RFC 8174  
+- RFC 5280 (X.509)  
+- RFC 8032 (Ed25519)  
+- RFC 8410 (Ed25519 in X.509)  
+- RFC 6234 (SHA-256)  
+- RFC 3161 (Timestamping)  
+- RFC 8785 (JSON Canonicalization)  
+
+---
+
+## 15. Final Statement
+
+Conformance ensures that:
+
+- all implementations behave consistently  
+- validation outcomes are deterministic  
+- trust guarantees are preserved  
+
+---
+
+### Key Principle
+
+> Conformance transforms architecture into enforceable trust.
