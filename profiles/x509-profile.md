@@ -6,14 +6,23 @@
 
 ## Status
 
-This document defines the **X.509 certificate profile** for the TEA Trust Architecture.
+This document defines the **X.509 certificate profile** used by the TEA Trust Architecture.
 
-This specification is **implementation-ready** but subject to change based on implementation experience and community feedback.
+It specifies how certificates are used to bind short-lived public keys to TEA signing operations, DNS publication, and long-term validation evidence.
 
-The key words **MUST**, **SHOULD**, and **MAY** are to be interpreted as described in:
+This specification is intended to be used together with:
 
-- RFC 2119  
-- RFC 8174  
+- the TEA Trust Architecture core specification
+- the TEA Evidence Bundle specification
+- the TEA Evidence Validation specification
+- the TEA Discovery specification
+- the TEA Conformance specification
+- the Sigsum profile, when Sigsum transparency is used
+
+The key words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** are to be interpreted as described in:
+
+- RFC 2119
+- RFC 8174
 
 ---
 
@@ -25,21 +34,22 @@ The key words **MUST**, **SHOULD**, and **MAY** are to be interpreted as describ
 4. [Identity Model](#4-identity-model)  
 5. [Terminology Clarification](#5-terminology-clarification)  
 6. [Certificate Roles](#6-certificate-roles)  
-7. [Profile Requirements](#7-profile-requirements)  
+7. [General Profile Requirements](#7-general-profile-requirements)  
 8. [Subject Name Requirements](#8-subject-name-requirements)  
 9. [SAN Requirements](#9-san-requirements)  
 10. [Key Usage and Extensions](#10-key-usage-and-extensions)  
-11. [Algorithms](#11-algorithms)  
+11. [Algorithm Requirements](#11-algorithm-requirements)  
 12. [Validity Period](#12-validity-period)  
 13. [Key Reuse Prohibition](#13-key-reuse-prohibition)  
 14. [Encoding and Publication](#14-encoding-and-publication)  
 15. [Validation Rules](#15-validation-rules)  
 16. [DNS and Policy Considerations](#16-dns-and-policy-considerations)  
-17. [Security Considerations](#17-security-considerations)  
-18. [Examples](#18-examples)  
-19. [Normative References](#19-normative-references)  
-20. [Informative References](#20-informative-references)  
-21. [Final Statement](#21-final-statement)  
+17. [Alignment with Sigsum Usage](#17-alignment-with-sigsum-usage)  
+18. [Security Considerations](#18-security-considerations)  
+19. [Examples](#19-examples)  
+20. [Normative References](#20-normative-references)  
+21. [Informative References](#21-informative-references)  
+22. [Final Statement](#22-final-statement)  
 
 ---
 
@@ -47,40 +57,48 @@ The key words **MUST**, **SHOULD**, and **MAY** are to be interpreted as describ
 
 This document defines how X.509 certificates are used in the TEA Trust Architecture.
 
-The profile supports:
+The profile is designed to support:
 
-- short-lived certificates  
-- ephemeral signing keys  
-- DNS-based trust anchor publication (TAPS)  
-- long-term validation via timestamps and transparency  
+- short-lived signing certificates
+- ephemeral signing keys
+- deterministic validation behavior
+- DNS-based publication in TEA-native deployments
+- long-term validation using timestamps and optional transparency evidence
+
+This profile does **not** use certificate subject naming as the source of trust identity.
 
 ---
 
 ## 2. Scope
 
-This profile applies to certificates containing public keys used for:
+This profile applies to X.509 certificates containing public keys used for:
 
-- TEA artifact signing  
-- TEA collection signing  
-- discovery document signing  
-- TEA-native trust anchor publication  
+- TEA artifact signing
+- TEA collection signing
+- discovery signing
+- publication of TEA-native trust anchors in DNS
 
-Applicable to:
+This profile applies to:
 
-- TEA-native trust model  
-- WebPKI trust model (with TEA overlay)  
+- **TEA-native trust model**
+- **WebPKI trust model with TEA trust overlay**
+
+It does not redefine general PKIX behavior beyond what is necessary for TEA.
 
 ---
 
 ## 3. Design Principles
 
-1. **Public key is the identity**  
-2. **Private key performs signing**  
-3. **Certificate is a short-lived wrapper**  
-4. **Trust derives from evidence, not key lifetime**  
-5. **Keys are ephemeral and single-use**  
-6. **DNS binds identity in TEA-native deployments**  
-7. **One key MAY be reused across systems (e.g., transparency), but not across time**  
+The TEA X.509 profile is based on the following principles:
+
+1. **The public key is the identity**
+2. **The private key performs signing**
+3. **The certificate is a short-lived validity wrapper**
+4. **Trust must not depend on long-lived private keys**
+5. **Evidence, not certificate longevity, provides long-term trust**
+6. **Key reuse is forbidden**
+7. **DNS provides publication and policy context, not universal trust by itself**
+8. **Ed25519-only simplifies interoperability and aligns with Sigsum usage**
 
 ---
 
@@ -88,81 +106,96 @@ Applicable to:
 
 In TEA:
 
-> The public key is the identity.
+> **The public key is the identity.**
 
-The identity is derived from:
+The certificate provides:
+
+- a validity interval
+- a standard container format
+- accountability metadata
+- a DNS-linked expression of key identity through SAN
+
+The trust identity is derived from:
 
 ```text
 SHA-256(public key)
 ```
 
-[RFC 6234]
+The fingerprint-derived identity is then expressed in DNS SAN form.
 
-The certificate:
-
-- provides a validity window  
-- provides metadata  
-- binds identity to DNS via SAN  
-
-It is **not** the root of trust.
+The certificate subject is **not** the trust identity.
 
 ---
 
 ## 5. Terminology Clarification
 
-- Signing is performed using the **private key**  
-- The certificate contains the corresponding **public key**  
-- The certificate does **not** perform cryptographic operations  
+In this specification:
 
-All references to signing MUST be interpreted as:
+- signing is performed using the **private key** of a key pair
+- the certificate contains the corresponding **public key**
+- the certificate does **not** perform cryptographic operations
 
-> signing with the private key corresponding to the public key in the certificate  
+All references such as:
+
+> “certificate used for signing”
+
+MUST be interpreted as:
+
+> “certificate containing the public key corresponding to the private key used for signing”
 
 ---
 
 ## 6. Certificate Roles
 
-Certificates bind public keys used for:
+Certificates are used to bind a public key to TEA signing operations for:
 
-- artifact signing  
-- collection signing  
-- discovery signing  
+- TEA artifact signing
+- TEA collection signing
+- discovery signing
 
-The corresponding private key performs the actual signing.
+In TEA-native mode, certificates are also published in DNS as trust-anchor distribution objects.
+
+The same certificate profile applies across these roles.
 
 ---
 
-## 7. Profile Requirements
+## 7. General Profile Requirements
 
 Certificates MUST:
 
-- be X.509 v3 [RFC 5280]  
-- contain an Ed25519 public key [RFC 8410]  
-- be short-lived  
-- include SAN DNS entries  
+- be X.509 version 3
+- conform to RFC 5280 unless this profile states otherwise
+- contain an Ed25519 public key
+- be short-lived
+- contain SAN DNS entries as defined by this profile
+- contain no unrelated identities
 
 Certificates MUST NOT:
 
-- rely on CN for identity  
-- contain multiple unrelated identities  
+- rely on Common Name for trust identity
+- encode multiple unrelated key identities
+- be reused across different signing events or release contexts
 
 ---
 
 ## 8. Subject Name Requirements
 
-The subject:
+The subject field is used for accountability metadata, not trust identity.
 
-- MAY include:
-  - O (organization)  
-  - OU (organizational unit)  
-  - C (country)  
+The subject MAY include:
 
-- MUST NOT be used for trust decisions  
+- `O` (organization)
+- `OU` (organizational unit)
+- `C` (country)
 
-CN:
+If a legal entity exists, `O` SHOULD contain the legal name of that entity.
 
-- SHOULD NOT be used  
-- MUST be ignored  
+The subject MUST NOT be used as a trust anchor or identity source.
+
+The `CN` field:
+
+- SHOULD NOT be used
+- MUST be ignored by consumers for trust decisions
 
 ---
 
@@ -170,31 +203,59 @@ CN:
 
 ### 9.1 Primary SAN
 
-Certificates MUST include:
-
-- exactly one primary SAN DNS entry  
-
-The SAN extension is defined in:
-
-- RFC 5280  
+Certificates MUST contain exactly one **primary SAN DNS entry**.
 
 The primary SAN:
 
-- MUST be under manufacturer-controlled domain  
-- MUST encode fingerprint-derived identity  
+- MUST be under the manufacturer-controlled domain
+- MUST encode the fingerprint-derived identity
 
----
+Example:
+
+```text
+<fingerprint>.tea.example.com
+```
 
 ### 9.2 Optional Secondary SAN
 
-Certificates MAY include:
-
-- one secondary SAN DNS entry  
+Certificates MAY include one **secondary SAN DNS entry** for continuity or long-term access.
 
 The secondary SAN:
 
-- MUST encode the same identity  
-- SHOULD be on separate infrastructure if under same organization  
+- MUST encode the same fingerprint-derived identity
+- MAY be under:
+  - the manufacturer-controlled domain, or
+  - an independent domain
+
+If the secondary SAN is under the same organization’s control, it SHOULD use:
+
+- a separate domain or subdomain, and
+- separate infrastructure or operational control boundaries
+
+Examples:
+
+```text
+<fingerprint>.backup.example.net
+<fingerprint>.longterm.example.com
+```
+
+### 9.3 Constraints
+
+The following constraints apply:
+
+- maximum of two SAN DNS entries
+- exactly one primary SAN
+- at most one secondary SAN
+- both SAN entries MUST refer to the same public key identity
+
+### 9.4 Rationale
+
+The optional secondary SAN provides resilience against:
+
+- infrastructure loss
+- DNS migration
+- organizational restructuring
+- long-term access failures
 
 ---
 
@@ -202,57 +263,73 @@ The secondary SAN:
 
 Certificates MUST include:
 
-- digitalSignature  
+- `digitalSignature` in Key Usage
 
-As defined in:
+No other key usages are required by this profile.
 
-- RFC 5280  
+Extended Key Usage is not required by this profile.
+
+If Extended Key Usage is present, it MUST NOT contradict the certificate’s intended signing use.
+
+Unnecessary or misleading extensions SHOULD NOT be included.
 
 ---
 
-## 11. Algorithms
+## 11. Algorithm Requirements
 
-### 11.1 Allowed Algorithm
+### 11.1 Allowed Public Key Algorithm
+
+Certificates MUST contain an:
 
 ```text
 Ed25519
 ```
 
-Defined in:
+public key.
 
-- RFC 8032  
-- RFC 8410 (X.509 usage)  
+No other public key algorithm is permitted in this version of the specification.
 
----
+### 11.2 Signature Algorithm Rationale
 
-### 11.2 Hash Algorithm
+Ed25519 is mandated because it provides:
+
+- a compact key and signature format
+- widespread modern library support
+- deterministic interoperability
+- compatibility with Sigsum’s key model
+- reduced implementation complexity
+- reduced downgrade ambiguity
+
+### 11.3 Hash Function for Identity Derivation
+
+The fingerprint used for identity derivation and SAN construction MUST be:
 
 ```text
-SHA-256
+SHA-256(public key)
 ```
 
-Defined in:
-
-- RFC 6234  
-
----
-
-### 11.3 Transparency Compatibility
-
-The same key MAY be used with:
-
-- Sigsum (recommended)  
-- Rekor (allowed)  
+No other digest algorithm is permitted for this purpose in this version of the specification.
 
 ---
 
 ## 12. Validity Period
 
-Certificates MUST:
+Certificates MUST have a lifetime of:
 
 ```text
-have a lifetime ≤ 1 hour
+less than or equal to 1 hour
 ```
+
+Shorter lifetimes are encouraged where operationally feasible.
+
+### 12.1 Rationale
+
+This requirement:
+
+- minimizes exposure from key compromise
+- eliminates practical dependence on revocation
+- reinforces the ephemeral signing model
+- shifts long-term trust to timestamps and preserved evidence
 
 ---
 
@@ -262,39 +339,82 @@ have a lifetime ≤ 1 hour
 
 A key pair MUST be single-use.
 
----
+This means:
 
-### 13.2 Fingerprint
+- the private key MUST be used only for a single signing event or release context
+- the public key MUST NOT appear in multiple certificates over time
+- the same key pair MUST NOT be reintroduced later in a new certificate
+
+### 13.2 Fingerprint Uniqueness
+
+The fingerprint:
 
 ```text
 SHA-256(public key)
 ```
 
-MUST be unique.
+MUST be treated as a unique identifier for a single signing event.
+
+Previously used fingerprints MUST NOT be reused.
+
+### 13.3 Publication API Enforcement
+
+Implementations of the Publication API MUST:
+
+- retain a record of previously used public key fingerprints
+- reject any attempt to publish or commit a new certificate with a known fingerprint
+- perform this check before commit and before any TEA-native DNS trust-anchor publication
+
+### 13.4 Rationale
+
+This requirement prevents:
+
+- replay of old signing identities
+- ambiguity in transparency evidence
+- confusion about key lifecycle
+- erosion of the ephemeral-key security model
 
 ---
 
 ## 14. Encoding and Publication
 
-Certificates MUST:
+Certificates MUST be encoded in DER.
 
-- be DER encoded [RFC 5280]  
+### 14.1 TEA-native Publication
 
-### TEA-native
+In TEA-native mode, certificates MUST be published in DNS using:
 
-Certificates MUST be published in DNS using:
+- CERT records, as specified for certificate storage in DNS
 
-- CERT records [RFC 4398]  
+DNS publication is a trust-anchor distribution mechanism in TEA-native deployments.
+
+### 14.2 WebPKI
+
+In WebPKI mode, certificates follow standard CA issuance and PKIX validation rules.
+
+The TEA Trust Architecture does not alter the underlying CA issuance model, but overlays it with TEA evidence requirements.
 
 ---
 
 ## 15. Validation Rules
 
-Consumers MUST:
+Consumers and validators MUST:
 
-- validate certificate structure [RFC 5280]  
-- verify validity period  
-- verify public key matches signature  
+- validate certificate structure according to RFC 5280
+- validate the certificate validity interval
+- verify that the public key in the certificate corresponds to the private key used to generate the signature
+- verify SAN constraints according to this profile
+- ignore Common Name for trust identity
+- enforce Ed25519-only acceptance
+- enforce key reuse prohibition where the implementation has publication or ecosystem history knowledge
+
+Consumers MUST NOT rely solely on certificate validity for long-term trust.
+
+Long-term trust requires:
+
+- timestamp validation
+- evidence validation
+- optional transparency validation according to policy
 
 ---
 
@@ -302,66 +422,156 @@ Consumers MUST:
 
 ### 16.1 TEA-native
 
-- DNSSEC SHOULD be used [RFC 4033, RFC 4034, RFC 4035]  
+In TEA-native mode:
 
----
+- DNS is used as a trust-anchor distribution mechanism
+- DNS publication is REQUIRED
+- DNSSEC is OPTIONAL but RECOMMENDED
+
+DNSSEC strengthens trust-anchor distribution by providing authenticated DNS responses.
 
 ### 16.2 WebPKI
 
-- DNS MAY enforce CA policy using:
-  - CAA records [RFC 8659]  
+In WebPKI mode:
+
+- DNS is **not** a TEA trust anchor
+- DNS remains relevant for policy through **CAA records**
+- DNSSEC strengthens the reliability of CAA evaluation when present
+
+This distinction is important:
+
+> In WebPKI mode, DNS supports issuance policy, but does not replace PKIX trust anchoring.
+
+### 16.3 CAA
+
+Implementations using WebPKI SHOULD evaluate:
+
+- Certification Authority Authorization (CAA) records
+
+as part of issuance-policy enforcement where applicable.
 
 ---
 
-## 17. Security Considerations
+## 17. Alignment with Sigsum Usage
 
-- short-lived certificates reduce exposure  
-- ephemeral keys eliminate long-term risk  
-- Ed25519 simplifies cryptography  
-- DNSSEC strengthens trust anchor distribution  
+Sigsum is optional in the TEA ecosystem, but this certificate profile is intentionally aligned with Sigsum usage.
+
+### 17.1 Conditional Requirement
+
+When Sigsum transparency is used:
+
+- the same Ed25519 key pair used for TEA signing MUST be the key identity represented in the Sigsum transparency evidence
+- the certificate MUST contain the public key corresponding to that signing key
+
+### 17.2 Why this alignment matters
+
+This provides:
+
+- a single cryptographic identity across signing and transparency
+- simpler binding validation
+- reduced ambiguity in evidence interpretation
+
+### 17.3 Transparency independence
+
+This profile does **not** require Sigsum.
+
+Other transparency systems, such as:
+
+- Rekor
+- SCITT
+
+remain allowed by the TEA Trust Architecture.
+
+However, this certificate profile is constrained to Ed25519 so that Sigsum usage is always compatible when selected.
 
 ---
 
-## 18. Examples
+## 18. Security Considerations
+
+This profile improves security by:
+
+- limiting certificate lifetime
+- forbidding key reuse
+- removing algorithm ambiguity
+- separating trust identity from subject naming
+- enabling DNS-backed publication in TEA-native mode
+- supporting policy reinforcement through CAA in WebPKI mode
+
+The profile intentionally trades flexibility for clarity and deterministic behavior.
+
+That trade-off is acceptable because TEA prioritizes:
+
+- verifiability
+- interoperability
+- long-term auditability
+
+over broad algorithm agility.
+
+---
+
+## 19. Examples
+
+### 19.1 Primary SAN only
 
 ```text
-abcd1234.tea.example.com
-abcd1234.backup.example.net
+ab12cd34ef56.tea.example.com
+```
+
+### 19.2 Primary and secondary SAN
+
+```text
+Primary:   ab12cd34ef56.tea.example.com
+Secondary: ab12cd34ef56.backup.example.net
+```
+
+### 19.3 Identity derivation
+
+```text
+fingerprint = SHA-256(public key)
+SAN        = <fingerprint>.<domain>
 ```
 
 ---
 
-## 19. Normative References
+## 20. Normative References
 
-- RFC 2119 — Key words for use in RFCs  
-- RFC 8174 — Updates to RFC 2119  
-- RFC 5280 — PKIX Certificate and CRL Profile  
-- RFC 8032 — EdDSA (Ed25519)  
-- RFC 8410 — Ed25519 in X.509  
-- RFC 6234 — SHA-256  
-- RFC 3161 — Time-Stamp Protocol  
-
----
-
-## 20. Informative References
-
-- RFC 4033 — DNSSEC Introduction  
-- RFC 4034 — DNSSEC Resource Records  
-- RFC 4035 — DNSSEC Protocol  
-- RFC 4398 — Storing Certificates in DNS  
-- RFC 8659 — Certification Authority Authorization (CAA)  
+- RFC 2119 — Key words for use in RFCs to Indicate Requirement Levels
+- RFC 8174 — Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words
+- RFC 5280 — Internet X.509 Public Key Infrastructure Certificate and CRL Profile
+- RFC 8032 — Edwards-Curve Digital Signature Algorithm (EdDSA)
+- RFC 8410 — Algorithm Identifiers for Ed25519, Ed448, X25519, and X448 for Use in the Internet X.509 Public Key Infrastructure
+- RFC 6234 — US Secure Hash Algorithms (SHA and SHA-based HMAC and HKDF)
+- RFC 4033 — DNS Security Introduction and Requirements
+- RFC 4034 — Resource Records for the DNS Security Extensions
+- RFC 4035 — Protocol Modifications for the DNS Security Extensions
+- RFC 4398 — Storing Certificates in the Domain Name System (DNS)
+- RFC 8659 — DNS Certification Authority Authorization (CAA) Resource Record
 
 ---
 
-## 21. Final Statement
+## 21. Informative References
 
-This profile enforces:
-
-- ephemeral identity  
-- deterministic validation  
-- long-term trust via evidence  
+- TEA Trust Architecture Core Specification
+- TEA Evidence Bundle Specification
+- TEA Evidence Validation Specification
+- TEA Discovery Specification
+- TEA Conformance Specification
+- TEA Sigsum Profile
+- Sigsum Project Documentation
+- Rekor Project Documentation
+- IETF SCITT Working Group Materials
 
 ---
+
+## 22. Final Statement
+
+This profile enforces a clear and deterministic model:
+
+- one algorithm
+- one key identity
+- one short-lived certificate
+- one signing event
+- evidence-based long-term trust
 
 ### Key Principle
 
