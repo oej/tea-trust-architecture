@@ -1,14 +1,4 @@
-Here is the updated practical end-to-end implementation guide, aligned with the current TEA trust architecture:
-* TEA-native only uses single-layer self-signed short-lived certificates
-* no TEA-native two-layer CA model
-* fingerprint-derived SAN DNS names
-* DNS publication required, DNSSEC optional
-* timestamps required for both discovery and release signing
-* transparency via Sigsum or SCITT
-* gated publication with human commit
-* ephemeral private keys deleted after use
 
-⸻
 
 TEA End-to-End Example
 
