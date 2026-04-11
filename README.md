@@ -39,6 +39,12 @@ The TEA Trust Architecture defines:
 
 > **how that data can be trusted — now and in the future**
 
+No set of trust mechanisms can make sure that the data published
+is in fact correct and trustworthy. This architecture makes sure
+that data published by a manufacturer or open source project
+will be distributed as-is without changes throught the software supply
+chain and that it can be validated for a long time as authentic.
+
 ---
 
 ## 2. Problem Statement
@@ -83,11 +89,19 @@ These are packaged into:
 ## 4. Core Design Principles
 
 ### 4.1 Evidence Over Infrastructure Trust
+
 Trust MUST be derived from verifiable evidence, not runtime infrastructure.
 
 ---
 
 ### 4.2 Short-Lived Keys, Long-Lived Evidence
+
+Protecting a secret key, part of a key pair, over a long time is
+complicated. Putting the burden of managing a secret key on a
+company or project will cause a lot of risks, or work with
+processes and technology to protect the key. Instead, this architecture
+is based on short-lived keys where the protection of the private
+key is only needed for a limited time, like durig a CI/CD process.
 
 - Signing certificates MUST be short-lived (≤ 1 hour)  
 - Long-term trust is provided by:
@@ -97,6 +111,10 @@ Trust MUST be derived from verifiable evidence, not runtime infrastructure.
 ---
 
 ### 4.3 Time Anchoring
+
+Time anchoring is done by signed trusted timestamps, where a checksum
+of an object is encapsulated by a signed and timestamped signature.
+This can prove that an object existed at a specific time.
 
 Timestamps:
 
