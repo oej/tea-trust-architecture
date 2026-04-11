@@ -1,436 +1,514 @@
-# 📘 TEA Trust Architecture — Evidence Bundle Specification
+# 📘 TEA Evidence Bundle Specification
 **Version:** 1.0  
-**Status:** Draft (Normative, Implementation-Ready)
+**Status:** Draft (Normative, RFC-style)
 
 ---
 
 ## Status
 
-This document defines the **evidence bundle** used in the TEA Trust Architecture.
+This document defines the **TEA evidence bundle**, the primary trust object in the TEA Trust Architecture.
 
-The evidence bundle is the **core unit of trust** for TEA artifacts.
+It specifies:
 
-It enables:
+- structure and semantics of evidence bundles  
+- how evidence binds to TEA objects  
+- how evidence is created and reused  
+- how integrity of external bundles is ensured  
 
-- long-term validation  
-- offline verification  
-- independence from external services  
+This specification applies to:
+
+- **TEA Trust Architecture (REQUIRED)**
+- **base TEA (OPTIONAL)**
 
 The key words **MUST**, **SHOULD**, and **MAY** are to be interpreted as described in:
 
 - RFC 2119  
 - RFC 8174  
 
-This document is intended to be used together with:
-
-- TEA Evidence Validation Specification  
-- TEA X.509 Profile  
-- RFC 3161 (Time-Stamp Protocol)  
-
 ---
 
 ## Table of Contents
 
-1. [Purpose](#1-purpose)  
-2. [Scope](#2-scope)  
-3. [Design Principles](#3-design-principles)  
-4. [What Is an Evidence Bundle](#4-what-is-an-evidence-bundle)  
-5. [Structure](#5-structure)  
-6. [Signature Model](#6-signature-model)  
-7. [Algorithm Requirements](#7-algorithm-requirements)  
-8. [Timestamp Evidence](#8-timestamp-evidence)  
-9. [Transparency Evidence](#9-transparency-evidence)  
-10. [Binding Rules](#10-binding-rules)  
-11. [Reuse Model](#11-reuse-model)  
-12. [Encoding and Canonicalization](#12-encoding-and-canonicalization)  
-13. [Transport and API Integration](#13-transport-and-api-integration)  
-14. [Validation Requirements](#14-validation-requirements)  
-15. [Security Considerations](#15-security-considerations)  
-16. [Normative References](#16-normative-references)  
-17. [Informative References](#17-informative-references)  
-18. [Final Statement](#18-final-statement)  
+1. [Introduction](#1-introduction)  
+2. [Role of the Evidence Bundle](#2-role-of-the-evidence-bundle)  
+3. [Scope and Binding Targets](#3-scope-and-binding-targets)  
+4. [Evidence Bundle Structure](#4-evidence-bundle-structure)  
+5. [Signature Semantics](#5-signature-semantics)  
+6. [Certificate Semantics](#6-certificate-semantics)  
+7. [Timestamp Semantics](#7-timestamp-semantics)  
+8. [Transparency Evidence](#8-transparency-evidence)  
+9. [Canonicalization and Digest Rules](#9-canonicalization-and-digest-rules)  
+10. [External Evidence Bundles](#10-external-evidence-bundles)  
+11. [Immutability and Reuse](#11-immutability-and-reuse)  
+12. [Relationship to Collections](#12-relationship-to-collections)  
+13. [Relationship to Discovery](#13-relationship-to-discovery)  
+14. [Normative Requirements](#14-normative-requirements)  
+15. [Error Conditions](#15-error-conditions)  
+16. [Security Considerations](#16-security-considerations)  
+17. [Normative References](#17-normative-references)  
+18. [Informative References](#18-informative-references)  
 
 ---
 
-## 1. Purpose
+## 1. Introduction
 
-The evidence bundle provides **all cryptographic material required to verify a TEA artifact**.
+The TEA Trust Architecture is built on a central idea:
 
-It ensures that validation can be performed:
+> **Trust is derived from evidence, not from long-lived keys or infrastructure.**
 
-- without contacting external systems  
-- long after certificate expiration  
-- independent of infrastructure availability  
+The **evidence bundle** is the object that carries that evidence.
+
+It allows a consumer to verify:
+
+- that an object was signed  
+- which key was used  
+- when the signature existed  
+- whether the event was publicly recorded (optional)  
+
+without requiring access to:
+
+- the original signing system  
+- a live PKI  
+- revocation infrastructure  
 
 ---
 
-## 2. Scope
+## 2. Role of the Evidence Bundle
 
-This specification applies to:
+The evidence bundle is:
 
-- TEA artifacts (primary use)  
-- TEA collections (optional)  
-- discovery documents (optional)  
+> **the unit of trust in TEA**
 
----
-
-## 3. Design Principles
-
-### 3.1 Evidence Over Infrastructure
-
-Trust is derived from:
+It replaces fragmented models where:
 
 - signatures  
+- certificates  
 - timestamps  
-- transparency  
+- transparency proofs  
 
-NOT from:
+are handled independently.
 
-- live services  
-- persistent keys  
+Instead, TEA groups them into a single, portable object.
 
----
+### 2.1 What the bundle proves
 
-### 3.2 Artifact-Centric Model
+An evidence bundle enables verification of:
 
-An evidence bundle is bound to:
-
-> a single TEA artifact
-
-It MAY be reused across multiple collections.
+- **authenticity** (signature)
+- **key validity at signing time** (certificate)
+- **existence in time** (timestamp)
+- **public accountability** (transparency, optional)
 
 ---
 
-### 3.3 Immutability
+## 3. Scope and Binding Targets
 
-Once created, an evidence bundle:
+An evidence bundle binds to a specific object.
 
-- MUST NOT change  
-- MUST remain valid indefinitely  
+### 3.1 Supported targets
+
+Evidence bundles MAY bind to:
+
+- **TEA artifacts** (primary use case)
+- **TEA collections**
+- **discovery documents**
+
+### 3.2 Binding rule
+
+The bundle MUST be cryptographically bound to:
+
+> the exact bytes of the target object
+
+This is achieved through the signature.
 
 ---
 
-### 3.4 Single Identity
-
-The same key identity is used across:
-
-- signing  
-- timestamp binding  
-- transparency logging  
-
----
-
-## 4. What Is an Evidence Bundle
+## 4. Evidence Bundle Structure
 
 An evidence bundle is a structured object containing:
 
-- the signature over the artifact  
-- the signing certificate (containing the public key)  
-- timestamp evidence  
-- transparency log evidence  
-
-The signature is created using the **private key**, while the certificate contains the corresponding public key.
-
----
-
-## 5. Structure
-
-Example (informative):
-
 ```json
 {
-  "signature": {
-    "algorithm": "Ed25519",
-    "value": "<base64-signature>"
-  },
-  "certificate": "<base64-der>",
-  "timestamps": [
-    {
-      "type": "rfc3161",
-      "token": "<base64>"
-    }
-  ],
-  "transparency": [
-    {
-      "system": "sigsum",
-      "logId": "<id>",
-      "inclusionProof": "<proof>",
-      "checkpoint": "<signed-tree-head>",
-      "witnessSignatures": [
-        "<sig1>",
-        "<sig2>"
-      ]
-    }
-  ]
+  "signature": { ... },
+  "certificate": { ... },
+  "timestamps": [ ... ],
+  "transparency": [ ... ]
 }
 ```
 
----
+### 4.1 Components
 
-## 6. Signature Model
-
-The signature:
-
-- MUST be computed using the private key  
-- MUST be over the raw artifact bytes  
-- MUST be included in the evidence bundle  
-
-Detached signatures MAY exist externally, but:
-
-> the evidence bundle contains the authoritative signature  
+| Component | Required | Description |
+|----------|---------|-------------|
+| signature | YES | Cryptographic signature over target |
+| certificate | YES | Contains public key used for verification |
+| timestamps | YES (trust architecture) | Proof of existence in time |
+| transparency | OPTIONAL | Log inclusion proofs |
 
 ---
 
-## 7. Algorithm Requirements
+## 5. Signature Semantics
 
-### 7.1 Signature Algorithm
+### 5.1 Purpose
 
-```text
-Ed25519
-```
+The signature binds:
 
-Defined in:
+- the target object  
+- to a specific key pair  
 
-- RFC 8032  
-- RFC 8410  
+### 5.2 Requirements
+
+- MUST use Ed25519  
+- MUST cover exact target bytes  
+- MUST be verifiable using the certificate  
+
+### 5.3 Important clarification
+
+> The signature is **part of the evidence bundle**, not a separate trust object.
+
+Detached signatures MAY exist for compatibility, but:
+
+- they are not sufficient for trust validation  
+- they should be included or referenced within the bundle  
 
 ---
 
-### 7.2 Hash Algorithm
+## 6. Certificate Semantics
+
+### 6.1 Role
+
+The certificate provides:
+
+- the public key  
+- validity period  
+- binding to DNS identity  
+
+### 6.2 Requirements
+
+- MUST follow TEA X.509 profile  
+- MUST have lifetime < 1 hour  
+- MUST contain DNS SAN  
+- MUST correspond to the signing key  
+
+### 6.3 Identity model
+
+The certificate is:
+
+> a **validity wrapper**, not a long-term identity
+
+Identity is derived from:
+
+- DNS anchoring  
+- key fingerprint  
+
+---
+
+## 7. Timestamp Semantics
+
+### 7.1 Requirement
+
+Timestamps are:
+
+> **REQUIRED in TEA Trust Architecture**
+
+### 7.2 What a timestamp proves
+
+A timestamp proves:
+
+- the signature existed at a specific time  
+- the signed object existed at that time  
+
+### 7.3 Trust model
+
+Trust depends on:
+
+- trusted TSA  
+- cryptographic binding to signature  
+
+### 7.4 Operational guidance
+
+- multiple timestamps SHOULD be used  
+- timestamps SHOULD be compared for consistency  
+
+---
+
+## 8. Transparency Evidence
+
+### 8.1 Optional component
+
+Transparency is:
+
+- OPTIONAL  
+- profile-driven  
+
+### 8.2 Supported systems
+
+- Rekor  
+- Sigsum  
+- SCITT  
+
+### 8.3 What it provides
+
+- append-only logging  
+- detection of equivocation  
+- auditability  
+
+### 8.4 Trust model
+
+Trust depends on:
+
+- log integrity  
+- inclusion proofs  
+- witness models (e.g., Sigsum)  
+
+---
+
+## 9. Canonicalization and Digest Rules
+
+### 9.1 Digest algorithm
+
+All digests MUST use:
 
 ```text
 SHA-256
 ```
 
-Defined in:
-
-- RFC 6234  
+No other algorithms are permitted.
 
 ---
 
-### 7.3 Enforcement
+### 9.2 JSON canonicalization
 
-Any other algorithm:
+When hashing JSON objects:
 
-> MUST result in validation failure  
+- MUST use RFC 8785 (JCS)
 
----
+### 9.3 Why this is required
 
-## 8. Timestamp Evidence
+JSON is not byte-stable.
 
-Evidence bundles MUST include:
+Canonicalization ensures:
 
-- at least one RFC 3161 timestamp  
-
-Defined in:
-
-- RFC 3161  
+- consistent hashing  
+- interoperability  
+- resistance to formatting changes  
 
 ---
 
-### 8.1 Binding Rule
+## 10. External Evidence Bundles
+
+### 10.1 Use case
+
+Evidence bundles MAY be stored externally and referenced.
+
+### 10.2 Requirement
+
+When referenced externally, the reference MUST include:
+
+- URI  
+- SHA-256 digest  
+
+### 10.3 Digest computation
+
+Digest MUST be computed over:
 
 ```text
-messageImprint = SHA-256(signature)
+SHA-256(JCS(evidenceBundle))
 ```
 
----
+### 10.4 Rationale
 
-### 8.2 Rationale
+This prevents:
 
-The timestamp proves:
-
-> the signature existed during certificate validity  
-
----
-
-## 9. Transparency Evidence
-
-### 9.1 Requirement Level
-
-Transparency evidence:
-
-- OPTIONAL in baseline deployments  
-- SHOULD be present in TEA-native deployments  
-- REQUIRED in high-assurance profiles  
+- substitution attacks  
+- silent modification of evidence  
 
 ---
 
-### 9.2 Supported Systems
+## 11. Immutability and Reuse
 
-TEA supports multiple transparency systems:
+### 11.1 Immutability
 
-- **Sigsum** (RECOMMENDED)  
-- **Rekor (Sigstore)** (ALLOWED)  
-- **SCITT (IETF)** (FUTURE)  
+An evidence bundle is:
 
-TEA does not depend on a single system.
+> **immutable**
 
----
-
-### 9.3 Sigsum
-
-Sigsum provides:
-
-- Ed25519-based identity  
-- log signatures  
-- witness-based consistency  
-
-Evidence SHOULD include:
-
-- inclusion proof  
-- checkpoint  
-- witness signatures  
-
-Reference:
-
-- https://www.sigsum.org  
+Any change results in a new bundle.
 
 ---
 
-### 9.4 Rekor (Sigstore)
+### 11.2 Artifact reuse
 
-Rekor provides:
-
-- Merkle tree transparency  
-- inclusion proofs  
-- signed tree heads  
-
-Evidence MAY include:
-
-- entry UUID  
-- inclusion proof  
-- signed tree head  
-
-References:
-
-- https://rekor.sigstore.dev  
-- https://www.sigstore.dev  
-
----
-
-### 9.5 SCITT (IETF)
-
-SCITT provides:
-
-- signed receipts  
-- COSE-based evidence  
-
-Reference:
-
-- https://datatracker.ietf.org/wg/scitt/about/  
-
----
-
-### 9.6 Binding Rule (Critical)
-
-Transparency MUST bind to:
-
-```text
-SHA-256(signature)
-```
-
-or:
-
-```text
-SHA-256(timestamped_signature)
-```
-
----
-
-## 10. Binding Rules
-
-The evidence chain:
-
-```text
-artifact → signature → timestamp → transparency
-```
-
-All bindings MUST match.
-
----
-
-## 11. Reuse Model
-
-Evidence bundles:
+Evidence bundles for artifacts:
 
 - MAY be reused across collections  
-- MUST NOT be modified  
+
+### 11.3 Collection reuse
+
+Evidence bundles for collections:
+
+- MUST NOT be reused across collections  
+
+### 11.4 Rationale
+
+Artifacts are immutable content.  
+Collections are contextual statements.
 
 ---
 
-## 12. Encoding and Canonicalization
+## 12. Relationship to Collections
 
-Evidence bundles are JSON.
+### 12.1 Collection role
 
-Canonicalization MUST follow:
+A TEA collection:
 
-- RFC 8785 (JCS)
+- binds artifacts to a release  
 
----
+### 12.2 Evidence relationship
 
-## 13. Transport and API Integration
+- artifact evidence proves authenticity  
+- collection evidence proves release statement  
 
-Artifacts MAY be delivered as:
+### 12.3 Important distinction
 
-- artifact only  
-- artifact + signature (multipart)  
-- artifact + evidence bundle (multipart)  
+> A collection does NOT replace artifact evidence.
 
----
-
-## 14. Validation Requirements
-
-Consumers MUST verify:
-
-- signature  
-- certificate  
-- timestamp  
-- transparency (if present)  
-- binding chain  
+Both must be evaluated independently.
 
 ---
 
-## 15. Security Considerations
+## 13. Relationship to Discovery
 
-- supports long-term validation  
-- minimizes key exposure  
-- transparency provides auditability  
-- Ed25519 simplifies implementation  
+### 13.1 Discovery evidence
 
----
+Discovery documents MAY have evidence bundles.
 
-## 16. Normative References
+### 13.2 Purpose
 
-- RFC 2119  
-- RFC 8174  
-- RFC 8032 (Ed25519)  
-- RFC 8410 (Ed25519 in X.509)  
-- RFC 6234 (SHA-256)  
-- RFC 3161 (Timestamping)  
-- RFC 8785 (JSON Canonicalization)  
+- validate service location metadata  
+- protect against tampering  
 
----
+### 13.3 Independence
 
-## 17. Informative References
+Discovery evidence is independent of:
 
-- Sigsum — https://www.sigsum.org  
-- Rekor — https://rekor.sigstore.dev  
-- Sigstore — https://www.sigstore.dev  
-- SCITT — https://datatracker.ietf.org/wg/scitt/about/  
+- artifact evidence  
+- collection evidence  
 
 ---
 
-## 18. Final Statement
+## 14. Normative Requirements
 
-The evidence bundle transforms:
+### 14.1 General
 
-> ephemeral cryptographic events  
-into  
-> durable, verifiable proof  
+An evidence bundle MUST:
+
+- include signature and certificate  
+- include at least one timestamp (trust architecture)  
+- use Ed25519  
+- use SHA-256 for digests  
 
 ---
 
-### Key Principle
+### 14.2 Binding
 
-> Trust is derived from consistent, independent evidence — not from persistent keys or infrastructure.
+The bundle MUST:
+
+- bind to exact target bytes  
+- not be reusable across different targets  
+
+---
+
+### 14.3 External references
+
+External bundles MUST:
+
+- include SHA-256 digest  
+- use canonical JSON for hashing  
+
+---
+
+## 15. Error Conditions
+
+Validation MUST fail when:
+
+- signature verification fails  
+- certificate is invalid  
+- timestamp missing or invalid  
+- digest mismatch occurs  
+- canonicalization rules violated  
+
+Example identifiers:
+
+- `EVIDENCE_SIGNATURE_INVALID`  
+- `EVIDENCE_CERT_INVALID`  
+- `EVIDENCE_TIMESTAMP_MISSING`  
+- `EVIDENCE_DIGEST_MISMATCH`  
+- `EVIDENCE_CANONICALIZATION_ERROR`  
+
+---
+
+## 16. Security Considerations
+
+### 16.1 Substitution attacks
+
+Mitigated by:
+
+- SHA-256 digest binding  
+
+---
+
+### 16.2 Key compromise
+
+Mitigated by:
+
+- short-lived certificates  
+- no key reuse  
+
+---
+
+### 16.3 Time manipulation
+
+Mitigated by:
+
+- trusted timestamps  
+- multiple TSAs  
+
+---
+
+### 16.4 Transparency risks
+
+Mitigated by:
+
+- witness verification  
+- multiple logs  
+
+---
+
+## 17. Normative References
+
+- RFC 2119 / RFC 8174  
+- RFC 5280 — X.509  
+- RFC 3161 — Time-Stamp Protocol  
+- RFC 8785 — JSON Canonicalization Scheme  
+
+---
+
+## 18. Informative References
+
+- Rekor Transparency Log  
+- Sigsum Transparency Log  
+- IETF SCITT Architecture  
+- TEA Trust Architecture Specification  
+
+---
+
+## Final Statement
+
+The evidence bundle defines:
+
+> **why an object can be trusted**
+
+It transforms TEA from a data exchange format into:
+
+> **a verifiable, time-aware, and audit-ready trust system**
