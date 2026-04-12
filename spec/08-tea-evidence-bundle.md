@@ -110,6 +110,7 @@ An evidence bundle binds to a specific object.
 Evidence bundles MAY bind to:
 
 - **TEA artifacts** (primary use case)
+- **compliance documents (treated as standalone artifacts)**
 - **TEA collections**
 - **discovery documents**
 
@@ -143,7 +144,7 @@ An evidence bundle is a structured object containing:
 | signature | YES | Cryptographic signature over target |
 | certificate | YES | Contains public key used for verification |
 | timestamps | YES (trust architecture) | Proof of existence in time |
-| transparency | OPTIONAL | Log inclusion proofs |
+| transparency | REQUIRED (trust architecture) | Log inclusion proofs |
 
 ---
 
@@ -234,32 +235,38 @@ Trust depends on:
 
 ## 8. Transparency Evidence
 
-### 8.1 Optional component
+### 8.1 Requirement
 
-Transparency is:
+Transparency evidence is:
 
-- OPTIONAL  
-- profile-driven  
+> **REQUIRED in TEA Trust Architecture**
 
 ### 8.2 Supported systems
 
 - Rekor  
 - Sigsum  
-- SCITT  
 
-### 8.3 What it provides
+SCITT MAY be supported in addition but is not required.
+
+### 8.3 Publisher requirement
+
+A publisher MUST include transparency evidence from at least one of:
+
+- Sigsum, or  
+- Rekor  
+
+### 8.4 Consumer requirement
+
+Consumers and TEA services implementing the TEA Trust Architecture MUST support validation of:
+
+- Sigsum  
+- Rekor  
+
+### 8.5 What it provides
 
 - append-only logging  
 - detection of equivocation  
 - auditability  
-
-### 8.4 Trust model
-
-Trust depends on:
-
-- log integrity  
-- inclusion proofs  
-- witness models (e.g., Sigsum)  
 
 ---
 
@@ -343,13 +350,19 @@ Evidence bundles for artifacts:
 
 - MAY be reused across collections  
 
-### 11.3 Collection reuse
+### 11.3 Scope of reuse
+
+Evidence reuse applies:
+
+> **ONLY to artifacts (including compliance documents treated as artifacts)**
+
+### 11.4 Collection reuse
 
 Evidence bundles for collections:
 
 - MUST NOT be reused across collections  
 
-### 11.4 Rationale
+### 11.5 Rationale
 
 Artifacts are immutable content.  
 Collections are contextual statements.
@@ -405,6 +418,7 @@ An evidence bundle MUST:
 
 - include signature and certificate  
 - include at least one timestamp (trust architecture)  
+- include transparency evidence (trust architecture)  
 - use Ed25519  
 - use SHA-256 for digests  
 
@@ -435,6 +449,7 @@ Validation MUST fail when:
 - signature verification fails  
 - certificate is invalid  
 - timestamp missing or invalid  
+- transparency evidence missing or invalid  
 - digest mismatch occurs  
 - canonicalization rules violated  
 
@@ -443,6 +458,7 @@ Example identifiers:
 - `EVIDENCE_SIGNATURE_INVALID`  
 - `EVIDENCE_CERT_INVALID`  
 - `EVIDENCE_TIMESTAMP_MISSING`  
+- `EVIDENCE_TRANSPARENCY_MISSING`  
 - `EVIDENCE_DIGEST_MISMATCH`  
 - `EVIDENCE_CANONICALIZATION_ERROR`  
 
@@ -482,6 +498,14 @@ Mitigated by:
 
 - witness verification  
 - multiple logs  
+
+---
+
+### 16.5 WebPKI mode
+
+When WebPKI is used as the trust model:
+
+> evidence bundles MUST NOT be included.
 
 ---
 
