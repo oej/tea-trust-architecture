@@ -72,6 +72,83 @@ Normative statement:
 The authority component of the TEI MUST be used as the basis for discovery.
 ```
 
+### 3.1 Organizational Identity Hints from TLS
+
+During discovery, the client establishes a TLS connection to retrieve the TEA discovery document.
+
+If the TLS certificate includes organizational identity attributes (e.g. `O` in the subject, or EV certificate fields), a client MAY record this information as an informational signal, subject to the constraints below.
+
+#### Applicability
+
+This mechanism applies **only if** the TLS certificate:
+
+- chains to a trusted root in the client’s WebPKI trust store, and  
+- is not issued by a private or enterprise PKI  
+
+If the certificate is:
+
+- self-signed, or  
+- issued by a private CA, or  
+- anchored outside the standard WebPKI trust bundle  
+
+then:
+
+```text
+Organizational identity fields MUST be ignored.
+```
+
+#### Purpose
+
+When applicable, this information can be used to:
+
+- support manual validation of the publisher identity  
+- provide additional context to users  
+- detect unexpected changes in organizational identity over time  
+
+#### Interpretation
+
+The TLS certificate provides:
+
+```text
+A certificate authority assertion that the domain was associated with a given organization at issuance time
+```
+
+This is a **contextual identity hint**, not a cryptographic trust anchor.
+
+#### Limitations
+
+Clients MUST NOT:
+
+- treat TLS organizational fields as a trust anchor  
+- use this information as proof of identity  
+- rely on it for automated trust decisions  
+
+#### Change detection
+
+If the observed organization name changes between discovery operations, a client MAY:
+
+- record the change  
+- surface it to operators  
+- use it as an input to manual review  
+
+Such changes MAY be caused by:
+
+- organizational changes (e.g. mergers, rebranding)  
+- certificate reissuance or CA changes  
+- differences in certificate validation levels  
+
+#### Relationship to TEA Trust Architecture
+
+This mechanism is independent of the TEA Trust Architecture.
+
+All cryptographic trust decisions in TEA are based on:
+
+- signatures  
+- signing certificates  
+- timestamps  
+- transparency evidence  
+
+TLS identity information is **not part of TEA trust validation**.
 ---
 
 ## 4. Discovery Mechanism

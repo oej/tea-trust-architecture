@@ -136,6 +136,79 @@ Trust is derived from **independent evidence sources**:
 
 No single component is sufficient on its own.
 
+### 5.1 TLS Identity Is Not a Trust Input
+
+The TEA Trust Architecture establishes trust based on:
+
+- signatures  
+- signing certificates  
+- timestamps  
+- transparency evidence  
+- DNS-based trust anchoring (where applicable)  
+
+Information obtained from TLS connections during discovery, including:
+
+- certificate subject fields (e.g. `O`, `CN`)  
+- Extended Validation (EV) attributes  
+- any certificate-presented organizational identity  
+
+MUST NOT be used as part of TEA trust validation.
+
+### Rationale
+
+TLS certificates used during discovery provide:
+
+```text
+Transport security (confidentiality and integrity)
+```
+
+and, in some cases, a certificate authority assertion of organizational identity.
+
+However:
+
+- WebPKI identity validation is not uniform across certificate authorities  
+- organization names are not globally unique  
+- certificates are short-lived and frequently reissued  
+- private PKIs may assert arbitrary identity information  
+
+Therefore, TLS identity information is:
+
+```text
+A contextual signal for human interpretation, not a cryptographic trust anchor
+```
+
+### Allowed Usage
+
+A client MAY:
+
+- record organizational identity fields from TLS certificates  
+- present them to users  
+- use them for anomaly detection (e.g. unexpected name changes)  
+
+but only when the certificate chains to a trusted public WebPKI root.
+
+### Prohibited Usage
+
+A client or service implementing the TEA Trust Architecture MUST NOT:
+
+- use TLS identity information to establish trust  
+- treat TLS certificates as a substitute for TEA signing certificates  
+- use TLS identity fields in automated validation decisions  
+
+### Separation of Concerns
+
+This reinforces the TEA design principle:
+
+```text
+Transport security (TLS) is separate from artifact trust (TEA Trust Architecture)
+```
+
+All normative trust decisions MUST be based solely on TEA evidence:
+
+- signatures  
+- certificates used for signing  
+- timestamps  
+- transparency logs  
 ---
 
 ## 6. Evidence Model
