@@ -90,7 +90,7 @@ Validation MUST start with:
 
 | Object | What it proves |
 |--------|---------------|
-| Evidence bundle | Authenticity, time, optional transparency |
+| Evidence bundle | Authenticity, time, transparency |
 | Artifact | Exact content |
 | Collection | Release membership |
 | Discovery | Service location |
@@ -146,6 +146,7 @@ Evidence validation MUST be performed before any higher-level validation.
   - signature  
   - certificate  
   - timestamps  
+  - transparency  
 
 ---
 
@@ -169,10 +170,14 @@ Evidence validation MUST be performed before any higher-level validation.
 
 ---
 
-#### Step 5 — Optional transparency validation
-- if present, MUST verify:
-  - inclusion proof  
-  - log consistency  
+#### Step 5 — Transparency validation
+- MUST verify at least one valid log entry from:
+  - Sigsum, or  
+  - Rekor  
+
+- validation MUST include:
+  - inclusion proof verification  
+  - log integrity checks  
 
 ---
 
@@ -295,16 +300,26 @@ Consumers SHOULD:
 
 ## 10. Transparency Validation
 
-### 10.1 Optional
+### 10.1 Requirement
 
 Transparency validation is:
 
-- OPTIONAL  
-- policy-driven  
+> **REQUIRED in TEA Trust Architecture**
 
 ---
 
-### 10.2 Checks
+### 10.2 Supported systems
+
+Consumers MUST support validation of:
+
+- Sigsum  
+- Rekor  
+
+SCITT MAY be supported in addition.
+
+---
+
+### 10.3 Checks
 
 - inclusion proof verification  
 - log integrity  
@@ -312,7 +327,7 @@ Transparency validation is:
 
 ---
 
-### 10.3 Sigsum-specific note
+### 10.4 Sigsum-specific note
 
 Consumers SHOULD verify:
 
@@ -345,6 +360,10 @@ Consumers MAY additionally verify:
 
 - CAA records  
 
+When WebPKI is used:
+
+> evidence bundles MUST NOT be required or expected.
+
 ---
 
 ## 12. Policy Controls
@@ -353,7 +372,6 @@ Validation behavior is influenced by policy.
 
 ### 12.1 Policy examples
 
-- require transparency logs  
 - require multiple TSAs  
 - restrict acceptable trust anchors  
 - enforce time bounds  
@@ -385,6 +403,7 @@ Validation MUST fail when:
 - signature invalid  
 - certificate invalid  
 - timestamp missing  
+- transparency evidence missing or invalid  
 - digest mismatch  
 - canonicalization failure  
 
@@ -393,6 +412,7 @@ Example identifiers:
 - `VALIDATION_SIGNATURE_INVALID`  
 - `VALIDATION_CERT_INVALID`  
 - `VALIDATION_TIMESTAMP_INVALID`  
+- `VALIDATION_TRANSPARENCY_INVALID`  
 - `VALIDATION_DIGEST_MISMATCH`  
 - `VALIDATION_CANONICALIZATION_ERROR`  
 
@@ -423,3 +443,28 @@ Mitigated by:
 
 - trusted TSAs  
 - multiple timestamps  
+
+---
+
+## 16. Normative References
+
+- RFC 2119 / RFC 8174  
+- RFC 5280 — X.509  
+- RFC 3161 — Time-Stamp Protocol  
+- RFC 8785 — JSON Canonicalization Scheme  
+
+---
+
+## 17. Informative References
+
+- Rekor Transparency Log  
+  https://github.com/sigstore/rekor  
+
+- Sigsum Transparency Log  
+  https://www.sigsum.org/  
+
+- IETF SCITT Architecture  
+  https://datatracker.ietf.org/wg/scitt/documents/  
+
+- TEA Trust Architecture Specification  
+  https://github.com/CycloneDX/transparency-exchange-api  
