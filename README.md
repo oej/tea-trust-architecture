@@ -1,268 +1,299 @@
-# TEA Trust Architecture
-
-> *CycloneDX tells you what is inside  
-> TEA tells you where to get it  
-> TEA Trust Architecture tells you why you can believe it*
-
-**Version:** 1.0.0  
-
----
+# 📘 Transparency Exchange API (TEA)
 
 ## Status
 
-This document defines the **TEA Trust Architecture**, an optional normative overlay to the Transparency Exchange API (TEA).
+The Transparency Exchange API (TEA) supports **automation of software and systems transparency for the software supply chain**.
 
-This specification is **implementation-ready** but subject to change based on implementation experience and community feedback.
+It enables organizations to:
 
-The key words **MUST**, **SHOULD**, and **MAY** are to be interpreted as described in RFC 2119.
+- publish and distribute **Software Bills of Materials (SBOMs)**  
+- share **VEX (Vulnerability Exploitability eXchange)** information  
+- expose software artifacts and related metadata  
+- correlate components with known vulnerabilities  
+- support compliance and regulatory reporting  
 
-This document is part of the TEA specification suite and is intended to be used together with:
+TEA is designed to support modern software supply chains, including:
 
-- TEA core specifications (TEI, Discovery, APIs)  
-- TEA Conformance specification  
-- TEA Evidence Bundle and Validation specifications  
-
----
-
-## 1. Introduction
-
-The **TEA Trust Architecture** is an optional overlay to the Transparency Exchange API (TEA).
-
-It defines how to establish **verifiable, long-term trust** in TEA artefacts and collections using cryptographic evidence.
-
-While TEA defines:
-- how artefacts are identified  
-- how services are discovered  
-- how data is retrieved  
-
-The TEA Trust Architecture defines:
-
-> **how that data can be trusted — now and in the future**
-
-No set of trust mechanisms can make sure that the data published
-is in fact correct and trustworthy. This architecture makes sure
-that data published by a manufacturer or open source project
-will be distributed as-is without changes throught the software supply
-chain and that it can be validated for a long time as authentic.
+- manufacturers  
+- open source projects  
+- integrators  
+- operators and consumers  
 
 ---
 
-## 2. Problem Statement
+## Purpose
 
-Traditional digital signatures provide:
+TEA provides a standardized mechanism to enable:
 
-- integrity  
-- identity  
+- **machine-readable transparency data exchange**  
+- **automation of vulnerability management workflows**  
+- **traceability across products, components, and releases**  
+- **consistent access to SBOM and security-related artifacts**  
 
-But they do **not** provide:
+This supports regulatory and operational requirements such as:
 
-- durable proof of *when* something was signed  
-- protection against backdating  
-- public auditability  
-- long-term verifiability after certificate expiry  
-
-This becomes critical in regulatory environments such as the EU Cyber Resilience Act (CRA), where:
-
-- artefacts must remain verifiable for ≥10 years  
-- validation must work after infrastructure changes  
-- historical states must be auditable  
+- EU Cyber Resilience Act (CRA)  
+- vulnerability disclosure and handling processes  
+- long-term software maintenance and auditability  
 
 ---
 
-## 3. Solution Overview
+## Specification Structure
 
-The TEA Trust Architecture extends TEA with **evidence-based validation**.
+The TEA specification is composed of three main parts:
 
-It combines:
-
-- **Signatures** → integrity and identity  
-- **Timestamps (RFC 3161)** → proof of existence in time  
-- **Transparency logs (Rekor, Sigsum, SCITT)** → public visibility and auditability  
-- **DNS / PKI trust anchors** → decentralized trust distribution  
-
-These are packaged into:
-
-> **Evidence Bundles — the atomic unit of trust**
-
----
-
-## 4. Core Design Principles
-
-### 4.1 Evidence Over Infrastructure Trust
-
-Trust MUST be derived from verifiable evidence, not runtime infrastructure.
-
----
-
-### 4.2 Short-Lived Keys, Long-Lived Evidence
-
-Protecting a secret key, part of a key pair, over a long time is
-complicated. Putting the burden of managing a secret key on a
-company or project will cause a lot of risks, or work with
-processes and technology to protect the key. Instead, this architecture
-is based on short-lived keys where the protection of the private
-key is only needed for a limited time, like durig a CI/CD process.
-
-- Signing certificates MUST be short-lived (≤ 1 hour)  
-- Long-term trust is provided by:
-  - timestamps  
-  - transparency evidence  
-
----
-
-### 4.3 Time Anchoring
-
-Time anchoring is done by signed trusted timestamps, where a checksum
-of an object is encapsulated by a signed and timestamped signature.
-This can prove that an object existed at a specific time.
-
-Timestamps:
-
-- prove when a signature existed  
-- ensure the certificate was valid at signing time  
-- prevent backdating  
-
----
-
-### 4.4 Transparency and Auditability
-
-Transparency systems provide:
-
-- append-only logs  
-- inclusion proofs  
-- detection of hidden or conflicting states  
-
----
-
-### 4.5 Decentralized Trust Anchoring
-
-Trust anchors MAY be:
-
-- X.509 PKIX  
-- DNS-based (TAPS)  
-- raw public keys  
-
-DNSSEC MAY strengthen DNS-based trust but is not mandatory.
-
----
-
-## 5. Evidence Bundle
-
-An **evidence bundle** contains all material required to validate a signed object:
-
-- signature  
-- signing certificate  
-- timestamp evidence  
-- transparency evidence  
-
-Properties:
-
-- applies to a single signed object  
-- supports offline validation  
-- enables long-term verification  
-
----
-
-## 6. Trust Domains
-
-The TEA Trust Architecture defines three independent but connected trust domains:
-
-### 6.1 Discovery Trust
-
-> “Am I talking to the correct TEA service?”
-
-Requires:
-
-- signed discovery document  
-- timestamp (MUST)  
-- optional transparency evidence  
-
----
-
-### 6.2 Consumer Trust
-
-> “Are these artefacts correct and authentic?”
-
-Validates:
-
-- integrity  
-- authenticity  
-- time of signing  
-- publication evidence  
-
----
-
-### 6.3 Publication Trust
-
-> “Was this release intentionally published?”
-
-Ensures:
-
-- human authorization  
-- controlled commit step  
-- auditable release  
-
----
-
-## 7. Artefact-Centric Validation
-
-Artefacts are **first-class verifiable objects**.
-
-They MUST be retrievable independently of collections.
-
-An artefact may be retrieved as:
-
-- artefact only  
-- artefact + detached signature  
-- artefact + evidence bundle  
-
-> Artefact validation MUST NOT depend on a collection.
-
----
-
-## 8. Validation Model
-
-Validation follows:
-
-```
-object → signature → certificate → timestamp → transparency
+```text
+tea-core/     → Core specification (identifiers, discovery, concepts)
+OpenAPI       → Normative API and data model
+spec/         → Trust architecture (optional overlay)
+profiles/     → Trust profiles and cryptographic constraints
 ```
 
-Each layer MUST bind to the same cryptographic object.
+---
+
+## 1. TEA Core Specification (`tea-core/`)
+
+The `tea-core/` directory contains the **primary human-readable specification** for TEA.
+
+It defines:
+
+- the **Transparency Exchange Identifier (TEI)**  
+- the **discovery mechanism**  
+- the **conceptual data model**  
+- the **API interaction model**  
+- lifecycle and versioning concepts  
+- compliance document handling  
+
+These documents provide:
+
+- explanatory context  
+- architectural rationale  
+- implementation guidance  
+
+### Important role
+
+```text
+tea-core/ is the authoritative descriptive specification of TEA,
+excluding the formal API schema.
+```
+
+Together, the documents in `tea-core/` form a **complete conceptual reference** for TEA.
 
 ---
 
-## 9. Relationship to TEA
+## 2. OpenAPI Specification (Normative API + Data Model)
 
-The TEA Trust Architecture:
+The OpenAPI specification (located in the repository under `spec/openapi.yaml`) is:
 
-- does NOT replace TEA  
-- extends TEA with trust semantics  
+> **Normative for both the API behavior and the data model**
+
+It defines:
+
+### API behavior
+
+- endpoints  
+- request/response formats  
+- filtering, pagination, and retrieval  
+
+### Data structures
+
+- products and product releases  
+- components and component releases  
+- collections  
+- artifacts (including SBOM, VEX, binaries, documents)  
+- compliance documents  
+- enum types  
+- lifecycle propagation using CLE (ECMA-428)  
+
+### Key relationship
+
+```text
+tea-core/:
+Explains the model
+
+OpenAPI:
+Defines the exact schema and wire format
+```
+
+Both are required for a complete implementation.
 
 ---
 
-## 10. Compliance Alignment
+## 3. TEA Trust Architecture (`spec/`, `profiles/`)
 
-Supports:
+The TEA Trust Architecture is an **optional overlay** that adds:
+
+- signatures  
+- certificates  
+- timestamps  
+- transparency logs (Sigsum, Rekor)  
+- DNS-based trust anchoring  
+- evidence bundles and validation  
+
+This is defined in:
+
+```text
+spec/
+profiles/
+```
+
+### Important distinction
+
+```text
+TEA Core:
+Defines WHAT is published and HOW it is accessed
+
+TEA Trust Architecture:
+Ensures HOW data is delivered and validated cryptographically
+```
+
+---
+
+### Trusted Delivery vs Trusted Content
+
+The TEA Trust Architecture provides **trusted delivery**, not **trusted content**.
+
+It enables a consumer to verify that:
+
+- the artifact has not been modified  
+- the artifact was published by a specific signing identity  
+- the artifact existed at a provable point in time  
+- the artifact is included in a transparency system (if applicable)  
+
+However, it does **not** guarantee that:
+
+- the contents of the artifact are correct  
+- the SBOM is complete  
+- vulnerability statements are accurate  
+- compliance claims are valid  
+- the publisher is trustworthy in a legal or operational sense  
+
+### Interpretation
+
+The strongest valid statement is:
+
+```text
+"This exact artifact was produced by this identity and existed at this time."
+```
+
+It is **not valid** to conclude:
+
+```text
+"This artifact is correct, complete, or trustworthy in its claims."
+```
+
+### Why this matters
+
+This separation ensures that:
+
+- TEA remains **technically verifiable without making semantic claims**  
+- responsibility for correctness remains with the publisher  
+- consumers can apply **independent policy and validation logic**  
+- the system avoids false assurances about software security  
+
+---
+
+The trust architecture is not required to implement TEA, but is necessary for:
 
 - long-term validation  
-- auditability  
-- lifecycle traceability  
-
-Aligned with:
-
-- EU Cyber Resilience Act (CRA)
+- regulatory compliance (e.g. CRA)  
+- supply chain integrity assurance  
 
 ---
 
-## 11. Summary
+## Design Principles
 
-The TEA Trust Architecture establishes:
+TEA is designed around a strict separation of concerns:
 
-- signatures → integrity  
-- timestamps → time anchoring  
-- transparency → public accountability  
+### 1. Separation of data and trust
 
-Together, they transform:
+- Core specification contains **no cryptographic requirements**  
+- Trust architecture is **fully decoupled**  
 
-> **ephemeral signatures into durable, verifiable trust**
+### 2. Automation-first design
+
+- APIs enable machine-to-machine interaction  
+- structured data supports automated processing  
+- lifecycle tracking enables continuous monitoring  
+
+### 3. Reuse of existing identifiers
+
+- TEI allows reuse of manufacturer-defined identifiers  
+- no requirement to introduce new identifier systems  
+
+### 4. Lifecycle-first model
+
+- releases are versioned and comparable  
+- lifecycle states follow **CLE (ECMA-428)**  
+
+### 5. Long-term operability
+
+- data model is stable and independent of trust mechanisms  
+- trust can evolve without breaking the core specification  
+
+---
+
+## Typical Workflows Supported by TEA
+
+TEA enables automation of common software supply chain workflows:
+
+### SBOM distribution
+
+- publish SBOMs per release  
+- retrieve SBOMs for validation or analysis  
+
+### Vulnerability correlation
+
+- link SBOM components to vulnerability databases  
+- distribute VEX statements to clarify exploitability  
+
+### Release tracking
+
+- compare versions of collections  
+- identify changes between releases  
+
+### Compliance reporting
+
+- publish organizational compliance documents  
+- support audit and regulatory processes  
+
+---
+
+## When to Use Each Part
+
+### Use TEA Core + OpenAPI
+
+When you need:
+
+- automation of transparency data exchange  
+- interoperability across tools and organizations  
+- lifecycle-aware software metadata  
+
+### Add Trust Architecture
+
+When you need:
+
+- verifiable integrity  
+- long-term auditability  
+- regulatory compliance  
+- supply chain security guarantees  
+
+---
+
+## Summary
+
+TEA provides a complete model for **automated software transparency in the software supply chain**:
+
+```text
+TEI + Discovery        → locating services  
+OpenAPI               → interacting with services and data structures  
+tea-core/             → understanding the model and architecture  
+Trust Architecture    → securing and validating the data (optional)  
+```
+
+This layered approach enables:
+
+- automation at scale  
+- interoperability across ecosystems  
+- traceability and auditability  
+- long-term evolution of both data and trust models
