@@ -1,467 +1,389 @@
-# 📘 TEA Transparency Exchange Identifier (TEI) Specification
-**Version:** 1.0  
-**Status:** Draft (Core TEA Specification)
+# Transparency Exchange Identifier (TEI) Specification
 
----
+Version: 1.0  
 
-## Table of Contents
+## Status
 
-- [1. Introduction](#1-introduction)
-- [2. Background and Design Intent](#2-background-and-design-intent)
-- [3. Identifier Reuse Policy](#3-identifier-reuse-policy)
-- [4. Rationale for a New URI Scheme](#4-rationale-for-a-new-uri-scheme)
-- [5. URI Scheme Definition](#5-uri-scheme-definition)
-- [6. Syntax](#6-syntax)
-- [7. Authority, Ownership, and Uniqueness](#7-authority-ownership-and-uniqueness)
-- [8. TEI Type System](#8-tei-type-system)
-- [9. Identifier Encoding](#9-identifier-encoding)
-- [10. Canonicalization](#10-canonicalization)
-- [11. Query Parameters](#11-query-parameters)
-- [12. Semantics](#12-semantics)
-- [13. Resolution Model](#13-resolution-model)
-- [14. Interoperability Considerations](#14-interoperability-considerations)
-- [15. Security Considerations](#15-security-considerations)
-- [16. IANA Considerations](#16-iana-considerations)
-- [17. References](#17-references)
+This document is part of the **TEA Core Specification set**.
+
+It defines the Transparency Exchange Identifier (TEI), which is used to uniquely identify products and bootstrap discovery in TEA.
+
+This specification is **normative for TEI construction and processing**, but operates independently of the TEA OpenAPI specification.
+
+It does not define trust or validation mechanisms. Those are defined in the TEA Trust Architecture.
+
+Status: Draft for implementation
 
 ---
 
 ## 1. Introduction
 
-The **Transparency Exchange Identifier (TEI)** defines a URI-based mechanism for identifying software products and components within the Transparency Exchange API (TEA).
+The Transparency Exchange Identifier (TEI) provides a uniform way to identify software products within the Transparency Exchange API (TEA) ecosystem.
 
-TEI is designed to provide a **stable, globally unique, and transport-independent identifier** that integrates naturally with DNS-based discovery and modern software supply chain systems.
+A TEI is designed to be:
+- Globally unique within a publisher-controlled namespace  
+- Resolvable via DNS-based discovery  
+- Stable over time, supporting long-term traceability  
+- Simple to process, requiring no interpretation of embedded identifiers  
 
-Unlike location-based identifiers such as URLs, TEI separates:
+Unlike many identifier systems, TEI does not attempt to define a new global identifier scheme. Instead, it reuses existing identifiers (such as Package URLs or CPEs) and binds them to a DNS authority that provides discovery and context.
 
-- **identity** (what something is)  
-- **location** (where it is hosted)  
-- **validation** (whether it is trustworthy)  
-
-This separation is fundamental to enabling long-term validation and resilience in distributed ecosystems.
-
----
-
-## 2. Background and Design Intent
-
-Modern software ecosystems already rely on multiple identifier systems:
-
-- Package URLs (purl)  
-- SWID tags  
-- commercial product identifiers (GTIN, EAN, etc.)  
-- internal product identifiers  
-
-However, these identifiers lack:
-
-- a unified resolution model  
-- DNS-based ownership  
-- integration with transparency and trust systems  
-
-TEI addresses this by:
-
-- **reusing existing identifiers**
-- **binding them to a DNS authority**
-- **providing a deterministic URI representation**
-
-A key design constraint is:
-
-> TEI MUST NOT introduce a new identifier ecosystem.
-
-Instead, it standardizes how existing identifiers are **represented, transported, and resolved**.
+This design aligns with modern software transparency needs, including regulatory requirements such as the Cyber Resilience Act (CRA), where product information must be accessible throughout the lifecycle — including before purchase.  [oai_citation:0‡01-tei-spec.md](sediment://file_00000000b45071fd859ed4db93af0cd4)
 
 ---
 
-## 3. Identifier Reuse Policy
+## 2. Core Concept
 
-### 3.1 General Principle
+A TEI is constructed from three elements:
+- a DNS authority (who owns the product identity)  
+- an identifier type (what kind of identifier is used)  
+- an encoded identifier value  
 
-TEI is explicitly designed to reuse existing identifiers.
+Together, these form a unique identifier within the authority’s namespace.
 
-A TEI MUST contain:
-
-- an identifier already assigned by the manufacturer, OR  
-- an identifier from an established ecosystem  
-
-TEI implementations MUST NOT require new identifiers if a suitable one exists.
-
----
-
-### 3.2 Preferred Identifiers
-
-Manufacturers SHOULD use:
-
-- Package URL (purl)  
-- SWID  
-- GTIN / EAN / UPC  
-- existing internal identifiers (if stable and unique)  
-
----
-
-### 3.3 UUID Fallback
-
-If no suitable identifier exists:
-
-```text
-A UUID MUST be generated and used with type "uuid".
+```
+tei://<authority>/<type>/<encoded-id>[?version=<string>]
 ```
 
-UUIDs MUST:
+### 2.1 Uniqueness Model
 
-- conform to RFC 4122  
-- be stable over time  
+The combination of:
 
----
-
-### 3.4 Stability Requirement
-
-Identifiers used in TEI:
-
-- MUST be stable  
-- MUST uniquely identify a product or component  
-- MUST NOT change across releases  
-
----
-
-### 3.5 Namespace Responsibility
-
-When using identifiers from external namespaces:
-
-- the manufacturer MUST ensure they are authorized to use them  
-- required registrations MUST be performed  
-
-TEI does not enforce or validate namespace ownership.
-
----
-
-### 3.6 Non-Goals
-
-TEI does not:
-
-- define a new identifier system  
-- validate identifier ownership  
-- act as a registry authority  
-
----
-
-## 4. Rationale for a New URI Scheme
-
-Existing approaches were evaluated:
-
-| Approach | Limitation |
-|--------|-----------|
-| HTTPS URLs | Bind identity to location |
-| URNs | No DNS-based ownership |
-| Raw identifiers | No unified resolution |
-
-TEI introduces:
-
-- DNS authority as identity root  
-- separation of identity and location  
-- integration with TEA discovery  
-
----
-
-## 5. URI Scheme Definition
-
-The TEI scheme is:
-
-```text
-tei
+```
+<authority> + <type> + <encoded-id>
 ```
 
-General form:
+MUST uniquely identify a product within the authority domain.
 
-```text
-tei://<authority>/<type>/<identifier>[?query]
+This means:
+- Different vendors can reuse the same identifier value without collision  
+- The authority domain provides namespacing and ownership  
+- No global registry is required  
+
+---
+
+## 3. Processing Model (Key Design Principle)
+
+TEI is intentionally designed to be simple and robust for consumers.
+
+### 3.1 Opaque Handling Requirement
+
+Implementations MUST treat TEI as an opaque identifier.
+
+This means:
+- MUST NOT parse the identifier value  
+- MUST NOT depend on the semantics of `<type>`  
+- MUST NOT require understanding of the underlying identifier scheme  
+- MUST NOT reject a TEI solely because the `<type>` is unknown  
+
+A TEI is, from a consumer perspective, simply a stable lookup key.
+
+---
+
+### 3.2 Rationale
+
+This design avoids several common failure modes:
+- tight coupling to specific identifier formats  
+- breakage when new identifier types are introduced  
+- inconsistent parsing logic across implementations  
+
+By treating TEI as opaque:
+- systems remain forward-compatible  
+- interoperability is preserved  
+- implementation complexity is minimized  
+
+---
+
+### 3.3 Optional Enrichment
+
+Implementations MAY:
+- decode the identifier  
+- interpret known types (e.g., purl, cpe)  
+- enrich user interfaces or analytics  
+
+However:
+
+Such behavior MUST remain optional and MUST NOT affect core TEI resolution.
+
+---
+
+## 4. Components
+
+### 4.1 Authority
+
+The authority is a DNS domain controlled by the product publisher.
+
+Example:
+
+```
+acme.example.com
 ```
 
-This structure reflects:
+The authority serves two purposes:
+1. Namespace control — ensuring identifier uniqueness  
+2. Discovery anchor — enabling TEA lookup  
 
-- authority → ownership  
-- type → identifier system  
-- identifier → canonical value  
-
----
-
-## 6. Syntax
-
-```abnf
-tei-uri     = "tei://" authority "/" type "/" identifier [ "?" query ]
-
-authority   = host
-
-type        = 1*( ALPHA / DIGIT / "-" )
-
-identifier  = 1*( ALPHA / DIGIT / "-" / "_" )
-
-query       = query-param *( "&" query-param )
-```
+Requirement:
+- The authority MUST correspond to the domain used for TEA discovery  
 
 ---
 
-## 7. Authority, Ownership, and Uniqueness
+### 4.2 Type
 
-The authority component:
+The `<type>` identifies which identifier scheme is used.
 
-- MUST be a valid DNS domain  
-- defines the namespace of the identifier  
-- MUST correspond to the TEA discovery domain  
+Examples include:
 
----
-
-### 7.1 Identifier Uniqueness (Normative)
-
-```text
-For a given authority, the combination of <type> and <identifier> MUST uniquely identify a single product or component.
-```
-
----
-
-### 7.2 Scope of Identity
-
-```text
-TEI identity = authority + type + identifier
-```
-
-The `version` parameter does not affect identity.
-
----
-
-### 7.3 Responsibility
-
-The authority owner MUST:
-
-- ensure uniqueness  
-- prevent collisions  
-- maintain identifier stability  
-
----
-
-### 7.4 Design Implication
-
-This model enables:
-
-- decentralized identifier management  
-- no global registry requirement  
-- compatibility with DNS delegation  
-
----
-
-## 8. TEI Type System
-
-### 8.1 Design Principle
-
-TEI types exist solely to enable reuse of existing identifier ecosystems.
-
----
-
-### 8.2 Defined Types
-
-| Type | Description |
+| Type  | Description |
 |------|------------|
-| purl | Package URL |
-| swid | SWID |
-| hash | Cryptographic hash |
-| uuid | UUID (fallback) |
-| eanupc | EAN/UPC |
-| gtin | GTIN |
-| asin | ASIN |
+| purl | Package URL (ECMA-427) |
+| cpe  | Common Platform Enumeration |
+| swid | ISO/IEC 19770-2 |
+| ean  | European Article Number |
+| gtin | Global Trade Item Number |
+| asin | Amazon Standard Identification Number |
+| uuid | UUID (fallback only) |
 
 ---
 
-### 8.3 Governance
+### 4.3 Encoded Identifier
 
-TEI types are governed by the TEA working group (TC54 TG1).
+The identifier value is encoded using BASE64url (RFC 4648).
 
-```text
-Manufacturers MUST NOT introduce new TEI types.
+This ensures:
+- safe embedding in URLs  
+- no reserved character conflicts  
+- consistent parsing across environments  
+
+Example:
+
+Original identifier:
+
+```
+pkg:docker/acme/widget
 ```
 
-```text
-TEI implementations MUST reject undefined types.
+Encoded:
+
 ```
-
----
-
-### 8.4 Extensibility
-
-New types:
-
-- MUST be defined by TC54 TG1  
-- MUST include canonicalization rules  
-- SHOULD reference external standards  
-
----
-
-## 9. Identifier Encoding
-
-Identifiers are encoded using:
-
-> base64url encoding (RFC 4648, Section 5)
-
----
-
-### Rules
-
-- input MUST be canonical UTF-8  
-- padding MUST NOT be used  
-- encoding MUST be deterministic  
-
----
-
-### Normative Statement
-
-```text
-The identifier MUST be the base64url encoding of the canonical UTF-8 representation of the identifier.
+cGtnOmRvY2tlci9hY21lL3dpZGdldA
 ```
 
 ---
 
-## 10. Canonicalization
+### 4.4 Version (Optional)
 
-Canonicalization ensures deterministic identity.
+The optional version parameter specifies a particular release:
+
+```
+?version=1.2.3
+```
+
+Important distinction:
+- TEI identifies the product  
+- Version identifies a release instance  
 
 ---
 
-### General Rules
+## 5. Type Governance (Producer Perspective)
 
-- UTF-8 encoding  
-- no whitespace  
-- stable representation  
+### 5.1 Governance Model
+
+New TEI types:
+- SHOULD be proposed through the TEA working group  
+- SHOULD represent established identifier schemes  
+- SHOULD provide interoperability value  
+
+The TEA working group (TC54 TG1) is open to receiving proposals for new types.
+
+Manufacturers MUST NOT define or use undefined TEI types.
 
 ---
 
-### Type-Specific Rules
+### 5.2 Guidance for Manufacturers
 
-#### purl
+Manufacturers:
+- SHOULD use existing, recognized identifier types  
+- SHOULD avoid defining private or ad-hoc types  
+- SHOULD prioritize identifiers already used in SBOMs or ecosystems  
 
-MUST follow purl canonical form.
+---
 
-#### uuid
+### 5.3 Important Distinction
 
-- lowercase  
-- RFC 4122 compliant  
+| Role | Requirement |
+|------|------------|
+| Producers | Controlled type usage |
+| Consumers | Fully tolerant, no assumptions |
 
-#### hash
+---
 
-```text
-<algorithm>:<value>
+## 6. Examples
+
+### 6.1 Basic TEI
+
+```
+tei://acme.example.com/purl/cGtnOmRvY2tlci9hY21lL3dpZGdldA
 ```
 
 ---
 
-### Equality
+### 6.2 TEI with Version
 
-Two TEIs are equal if all components match after normalization.
-
----
-
-## 11. Query Parameters
-
-### version
-
-```text
-?version=<string>
+```
+tei://acme.example.com/purl/cGtnOmRvY2tlci9hY21lL3dpZGdldA?version=1.2.3
 ```
 
-- OPTIONAL  
-- applies only to products  
-- does not affect identity  
-
 ---
 
-## 12. Semantics
+### 6.3 Hardware Identifier
 
-A TEI identifies:
-
-- a product  
-- or a component  
-
-It does not identify:
-
-- artifacts  
-- locations  
-
----
-
-## 13. Resolution Model
-
-TEIs are not directly dereferenceable.
-
-```text
-TEI → DNS → discovery → API → data
+```
+tei://manufacturer.eu/ean/NDIxMjM0NTY3ODkw
 ```
 
-This ensures separation of:
+---
 
-- identity  
-- location  
-- trust  
+### 6.4 Marketplace Identifier
+
+```
+tei://marketplace.example/asin/QjAwMTIzNDU2
+```
 
 ---
 
-## 14. Interoperability Considerations
+### 6.5 UUID Fallback
 
-Implementations MUST:
-
-- canonicalize before encoding  
-- use base64url without padding  
-
----
-
-### Case Rules
-
-| Component | Rule |
-|----------|------|
-| scheme | insensitive |
-| authority | insensitive |
-| type | sensitive |
-| identifier | sensitive |
+```
+tei://startup.io/uuid/MTIzZTQ1NjctZTg5Yi0xMmQzLWE0NTYtNDI2NjE0MTc0MDAw
+```
 
 ---
 
-### Consistency Requirement
+## 7. Resolution Model
 
-Equivalent identifiers MUST produce identical TEIs.
+### 7.1 Discovery Entry Point
+
+A TEI is resolved by querying:
+
+```
+https://<authority>/.well-known/tea
+```
 
 ---
 
-## 15. Security Considerations
+### 7.2 DNS Behavior
 
-TEI itself provides no trust guarantees.
+Resolution may involve:
+- A and AAAA records  
+- SVCB and HTTPS DNS record types  
+
+DNSSEC is RECOMMENDED.
+
+---
+
+### 7.3 Resolution Flow
+
+A consumer typically:
+1. extracts `<authority>` from the TEI  
+2. retrieves the discovery document  
+3. selects endpoint and trust model  
+4. retrieves TEA data  
+
+---
+
+## 8. Validation
+
+Validation is intentionally minimal.
+
+A TEI is valid if:
+- syntax is correct  
+- authority is a valid DNS name  
+- encoding is valid BASE64url  
+
+Implementations MUST NOT validate identifier semantics.
+
+---
+
+## 9. Security Considerations
+
+### 9.1 Transport Security
+
+- HTTPS is REQUIRED  
+- TLS 1.3 or higher MUST be used  
+- Plain HTTP MUST NOT be used  
+
+---
+
+### 9.2 DNS Security
+
+DNSSEC is RECOMMENDED.
+
+---
+
+### 9.3 Trust Model
+
+TEI itself provides no trust.
 
 Trust is established through:
-
 - TEA trust architecture  
 - signatures  
-- timestamps  
-- transparency systems  
+- transparency logs  
+- DNS trust anchors  
 
 ---
 
-### Risks
+### 9.4 CRA Alignment
 
-- authority spoofing  
-- homograph attacks  
-- encoding inconsistencies  
+TEI enables “insights before purchase” by allowing:
+- customers  
+- auditors  
+- regulators  
 
----
-
-## 16. IANA Considerations
-
-- Scheme: `tei`  
-- Status: provisional  
-- Applications: TEA  
-- Contact: TEA / CycloneDX  
-- Change controller: TEA maintainers  
+to retrieve product transparency data prior to acquisition.
 
 ---
 
-## 17. References
+## 10. Interoperability and Use Cases
 
-- RFC 3986 — URI Syntax  
-- RFC 4648 — Base64url  
-- RFC 4122 — UUID  
-- RFC 7595 — URI Scheme Registration  
+### 10.1 SBOM Integration
+
+TEI can be used as a stable identifier in SBOMs.
 
 ---
+
+### 10.2 Asset Inventory Integration
+
+Organizations can store TEI in asset inventories to:
+- correlate assets with SBOMs  
+- track vulnerabilities  
+- manage lifecycle risk  
+
+---
+
+## 11. Distribution to End Users
+
+TEI SHOULD be made available via:
+- QR codes on packaging  
+- software “About” menus  
+- invoices and delivery documents  
+
+---
+
+## 12. Summary
+
+TEI provides:
+- a globally unique identifier model without a central registry  
+- a simple, opaque processing model for consumers  
+- a governed identifier ecosystem for producers  
+- strong alignment with modern transparency and regulatory requirements  
+
+---
+
+## 13. References
+
+- ECMA-427 (purl): https://tc54.org/purl/  
+- NIST CPE: https://nvd.nist.gov/products/cpe  
+- RFC 4648 (Base64url): https://www.rfc-editor.org/rfc/rfc4648  
+- RFC 8446 (TLS 1.3)  
+- Transparency Exchange API: https://github.com/CycloneDX/transparency-exchange-api  
