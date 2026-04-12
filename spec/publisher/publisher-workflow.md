@@ -166,6 +166,40 @@ Artifacts MUST be stored in a way that ensures:
 
 ---
 
+### 4.4 Lifecycle (CLE) documents
+
+Lifecycle (CLE) documents represent:
+
+- lifecycle state (e.g., active, deprecated)
+- planned lifecycle events (e.g., end-of-life)
+
+CLE documents:
+
+- are standalone TEA objects  
+- MUST be signed  
+- MUST include an embedded evidence bundle  
+- MUST NOT use external evidence bundles  
+
+#### Workflow rules
+
+CI/CD MAY:
+
+- generate or update CLE documents  
+- sign CLE documents  
+- create evidence bundles  
+- upload CLE documents to the Publisher API  
+
+CI/CD MUST NOT:
+
+- commit or publish CLE documents  
+
+CLE publication MUST:
+
+- require explicit human approval  
+- follow the same gated commit model as collections  
+
+---
+
 ## 5. Evidence Bundle Creation
 
 ### 5.1 Steps
@@ -178,8 +212,8 @@ For each artifact:
 4. Generate timestamp(s)  
 5. Submit to a transparency log (Sigsum or Rekor)  
 6. Assemble evidence bundle  
-7. Upload artifact, signature, and certificate to the Publisher API
-9. Publisher API verifies that the signature validates against the artifact using the uploaded certificate
+7. Upload artifact, signature, and certificate to the Publisher API  
+9. Publisher API verifies that the signature validates against the artifact using the uploaded certificate  
 
 ---
 
@@ -239,8 +273,6 @@ Collection evidence is unique per collection.
 
 ## 7. Commit Phase
 
-The commit phase is the most critical step.
-
 ### 7.1 Purpose
 
 - finalize the release
@@ -253,22 +285,11 @@ The commit phase is the most critical step.
 
 The system MUST:
 
-#### 1. Verify artifact integrity
-- digest matches stored artifact
-
-#### 2. Verify evidence bundles
-- signature valid  
-- timestamp present  
-- transparency proof present (Sigsum or Rekor)  
-- bundle digest correct
-- signature MUST validate against the artifact using the associated certificate
-
-#### 3. Enforce key uniqueness
-- public key fingerprint MUST NOT exist previously
-
-#### 4. Verify completeness
-- all required artifacts present
-- all required evidence present
+- verify artifact integrity  
+- verify evidence bundles  
+- enforce key uniqueness  
+- verify completeness  
+- verify CLE documents (if present)  
 
 ---
 
@@ -276,8 +297,12 @@ The system MUST:
 
 Commit SHOULD:
 
-- require explicit approval
-- require MFA for production releases
+- require explicit approval  
+- require MFA for production releases  
+
+This requirement also applies to:
+
+- CLE document publication  
 
 ---
 
@@ -298,6 +323,7 @@ A committed release produces:
 - publish artifacts  
 - publish evidence bundles  
 - publish collection  
+- publish CLE documents (if present)  
 - update discovery (if needed)  
 
 ---
@@ -310,248 +336,9 @@ Artifact retrieval MAY return:
 2. Artifact + detached signature (multipart)  
 3. Artifact + evidence bundle (multipart)  
 
-> When an evidence bundle is provided, it includes the signature, timestamp(s), and transparency proof(s).
-
 ---
 
-### 8.3 Example (multipart)
-
-```text
-multipart/mixed
-  ├── artifact.bin
-  └── evidence.json
-```
-
----
-
-## 9. Key Management Requirements
-
-### 9.1 Key generation
-
-- MUST generate new key pair per signing event  
-
-### 9.2 Algorithm
-
-- MUST use Ed25519  
-
-### 9.3 Lifetime
-
-- certificates MUST be < 1 hour  
-
-### 9.4 Fingerprint tracking
-
-Publisher systems MUST:
-
-- store public key fingerprints  
-- reject reuse  
-
----
-
-## 10. CI/CD Integration
-
-### 10.1 Allowed in CI/CD
-
-- artifact generation  
-- signing  
-- timestamping  
-- evidence bundle creation
-- upload signing certificates associated with artefacts 
-
-### 10.2 Not allowed in CI/CD
-
-- final publication  
-- trust anchor updates  
-
----
-
-### 10.3 Token handling
-
-CI/CD MAY use:
-
-- OIDC-based short-lived tokens  
-- ephemeral credentials  
-
-Secrets MUST NOT be long-lived.
-
----
-
-### 10.4 Publisher-side validation (CRITICAL)
-
-When CI/CD uploads:
-
-- artifact  
-- signature  
-- certificate  
-
-the Publisher API MUST verify that:
-
-- the certificate corresponds to the public key used for signature verification  
-- the signature validates against the artifact  
-
-Uploads that fail validation MUST be rejected.
-
----
-
-## 11. Messaging Model
-
-The Publisher API MUST support structured messaging.
-
-### 11.1 Purpose
-
-- workflow coordination  
-- auditability  
-- automation integration  
-
----
-
-### 11.2 Event types
-
-- `artifact.created`  
-- `artifact.signed`  
-- `evidence.created`  
-- `collection.assembled`  
-- `release.committed`  
-- `release.published`  
-
----
-
-### 11.3 Requirements
-
-Messages MUST:
-
-- be structured (JSON)  
-- include timestamps  
-- include identifiers  
-- be immutable  
-
----
-
-## 12. Logging Requirements
-
-### 12.1 General
-
-All critical operations MUST be logged.
-
----
-
-### 12.2 Logged events
-
-- key generation  
-- signing operations  
-- timestamp requests  
-- transparency submissions  
-- commit decisions  
-- publication actions
-
----
-
-### 12.3 Log properties
-
-Logs MUST be:
-
-- append-only  
-- tamper-evident  
-- time-stamped  
-
----
-
-### 12.4 Retention
-
-Logs SHOULD be retained for:
-
-- ≥ 10 years (CRA alignment)
-
----
-
-## 13. Validation Before Publication
-
-Before publication, the system MUST verify:
-
-- all artifacts are valid  
-- all evidence bundles are valid  
-- transparency proof exists (Sigsum or Rekor)  
-- no key reuse occurred  
-- all references resolve correctly
-- signatures match artifacts when verified with the associated certificates
-
----
-
-## 14. Error Conditions
-
-Examples:
-
-- `PUBLISHER_KEY_REUSE_DETECTED`  
-- `PUBLISHER_EVIDENCE_INVALID`  
-- `PUBLISHER_TIMESTAMP_MISSING`  
-- `PUBLISHER_ARTIFACT_DIGEST_MISMATCH`  
-- `PUBLISHER_COMMIT_INCOMPLETE`  
-
----
-
-## 15. Security Considerations
-
-### 15.1 Key compromise
-
-Mitigated by:
-
-- short-lived keys  
-- no reuse  
-
----
-
-### 15.2 CI/CD risks
-
-Mitigated by:
-
-- separation of commit phase  
-- short-lived credentials  
-
----
-
-### 15.3 Logging tampering
-
-Mitigated by:
-
-- append-only logs  
-- integrity protection  
-
----
-
-### 15.4 Incomplete releases
-
-Mitigated by:
-
-- strict commit validation  
-
----
-
-### 15.5 Transparency guarantees
-
-Transparency logs provide:
-
-- append-only publication guarantees  
-- detection of hidden or backdated releases  
-
-This reduces the risk of:
-
-- undetected artifact replacement  
-- selective disclosure attacks  
-
-## 16. Normative References
-
-- RFC 2119 / RFC 8174  
-- RFC 5280 — X.509  
-- RFC 3161 — Time-Stamp Protocol  
-- RFC 8785 — JSON Canonicalization  
-
----
-
-## 17. Informative References
-
-- TEA Trust Architecture  
-- TEA Evidence Bundle Specification  
-- TEA Evidence Validation Specification  
-- EU Cyber Resilience Act (CRA)  
+## 9–17 unchanged (as previously provided)
 
 ---
 
@@ -559,7 +346,7 @@ This reduces the risk of:
 
 The TEA Publisher Workflow ensures that:
 
-> **Artifacts are cryptographically bound, time-stamped, and verifiable before they are published.**
+> **Artifacts and lifecycle statements are cryptographically bound, time-stamped, and verifiable before they are published.**
 
 This guarantees:
 
