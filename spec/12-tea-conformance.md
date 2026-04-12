@@ -68,6 +68,12 @@ Applies to:
 - TEA publishers (release systems)  
 - TEA services (APIs)  
 
+Including handling of:
+
+- artefacts  
+- collections  
+- lifecycle (CLE) documents  
+
 ---
 
 ## 3. Conformance Levels
@@ -190,6 +196,16 @@ Transparency:
 
 ---
 
+### 7.1 Lifecycle (CLE) Evidence Requirements
+
+Lifecycle (CLE) documents:
+
+- MUST include an **embedded evidence bundle**  
+- MUST NOT rely on external evidence bundle references  
+- MUST follow the same cryptographic and timestamp requirements as artefacts  
+
+---
+
 ## 8. Validation Requirements
 
 Validators MUST:
@@ -206,12 +222,29 @@ Validators MUST:
 All bindings MUST match:
 
 ```text
-artifact → signature → timestamp → transparency
+object → signature → timestamp → transparency
 ```
+
+Where object MAY be:
+
+- artifact  
+- collection  
+- discovery document  
+- lifecycle (CLE) document  
 
 ---
 
-### 8.2 Algorithm Enforcement
+### 8.2 Lifecycle Validation
+
+Validators MUST, for lifecycle documents:
+
+- validate evidence bundle (embedded)  
+- validate version consistency  
+- validate signature over full lifecycle document  
+
+---
+
+### 8.3 Algorithm Enforcement
 
 Non-compliant algorithms:
 
@@ -275,6 +308,17 @@ Publishers MUST:
 
 ---
 
+### 10.4 Lifecycle Publication
+
+Publishers MUST:
+
+- treat lifecycle (CLE) publication as a controlled release process  
+- require authorization equivalent to collection publication  
+- ensure lifecycle documents are versioned  
+- retain previous versions for comparison and audit  
+
+---
+
 ## 11. API Requirements
 
 APIs MUST support:
@@ -285,7 +329,17 @@ APIs MUST support:
 
 ---
 
-### 11.1 Supported Formats
+### 11.1 Lifecycle Support
+
+APIs MUST support:
+
+- retrieval of lifecycle (CLE) documents  
+- access to **previous versions** of lifecycle documents  
+- version identifiers for lifecycle data  
+
+---
+
+### 11.2 Supported Formats
 
 - artifact only  
 - artifact + signature  

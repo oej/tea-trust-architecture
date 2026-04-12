@@ -10,6 +10,7 @@ This document defines how evidence is used in TEA to establish long-term, verifi
 
 * artefacts  
 * collections  
+* lifecycle (CLE) documents  
 * identities  
 * publication events  
 
@@ -65,6 +66,7 @@ Properties:
 * integrity (data has not changed)  
 * origin (which key produced it)  
 * The signature MUST be verifiable using the public key contained in the associated certificate and MUST correspond to the exact target object.
+
 ---
 
 ### 3.2 Timestamp (RFC 3161)
@@ -342,9 +344,9 @@ TEA uses certificates as:
 ### 4.2 Binding Structure
 
 ```text
-artefact
+target object (artefact / collection / discovery / lifecycle)
   ↓
-signature (over exact artefact bytes)
+signature (over exact object bytes)
   ↓
 timestamp(signature)
   ↓
@@ -368,7 +370,8 @@ transparency (optional)
 * collection signature  
 * artefact signatures  
 * discovery signature  
-* the signature MUST validate against the object using the associated certificate
+* lifecycle (CLE) document signatures  
+* the signature MUST validate against the object using the associated certificate  
 
 ---
 
@@ -376,6 +379,7 @@ transparency (optional)
 
 * artefacts  
 * collection  
+* lifecycle document (for lifecycle validation)  
 * signing certificate  
 
 ---
@@ -391,11 +395,12 @@ transparency (optional)
 
 A consumer MUST validate:
 
-1. signature integrity (including verification against the object using the associated certificate)
+1. signature integrity (including verification against the object using the associated certificate)  
 2. timestamp validity  
 3. certificate validity at timestamp  
 4. identity binding (DNS or PKI)  
-5. artefact inclusion in collection  
+5. artefact inclusion in collection (if applicable)  
+6. lifecycle document version integrity (if applicable)  
 
 ---
 
@@ -407,6 +412,13 @@ Before accepting an object and its evidence:
 
 - the signature MUST be verified against the object  
 - the certificate MUST correspond to the public key used for verification  
+
+This applies to:
+
+- artefacts  
+- collections  
+- discovery documents  
+- lifecycle (CLE) documents  
 
 Objects failing these checks MUST be rejected.
 
@@ -486,4 +498,4 @@ This model ensures:
 * long-term verifiability  
 * independence from revocation  
 * resilience against key compromise  
-* strong alignment with modern supply chain security  
+* strong alignment with modern supply chain security

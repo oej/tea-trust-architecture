@@ -12,6 +12,7 @@ This document defines how a TEA consumer validates:
 - **TEA artifacts**
 - **TEA collections**
 - **discovery documents**
+- **lifecycle (CLE) documents**
 
 It specifies:
 
@@ -42,15 +43,16 @@ The key words **MUST**, **SHOULD**, and **MAY** are to be interpreted as describ
 6. [Artifact Validation](#6-artifact-validation)  
 7. [Collection Validation](#7-collection-validation)  
 8. [Discovery Validation](#8-discovery-validation)  
-9. [Timestamp Validation](#9-timestamp-validation)  
-10. [Transparency Validation](#10-transparency-validation)  
-11. [DNS and Trust Anchor Validation](#11-dns-and-trust-anchor-validation)  
-12. [Policy Controls](#12-policy-controls)  
-13. [Validation Outcomes](#13-validation-outcomes)  
-14. [Error Conditions](#14-error-conditions)  
-15. [Security Considerations](#15-security-considerations)  
-16. [Normative References](#16-normative-references)  
-17. [Informative References](#17-informative-references)  
+9. [Lifecycle (CLE) Validation](#9-lifecycle-cle-validation)  
+10. [Timestamp Validation](#10-timestamp-validation)  
+11. [Transparency Validation](#11-transparency-validation)  
+12. [DNS and Trust Anchor Validation](#12-dns-and-trust-anchor-validation)  
+13. [Policy Controls](#13-policy-controls)  
+14. [Validation Outcomes](#14-validation-outcomes)  
+15. [Error Conditions](#15-error-conditions)  
+16. [Security Considerations](#16-security-considerations)  
+17. [Normative References](#17-normative-references)  
+18. [Informative References](#18-informative-references)  
 
 ---
 
@@ -66,6 +68,7 @@ The TEA Trust Architecture defines a **multi-layer validation model**:
 - artifact validation  
 - collection validation  
 - discovery validation  
+- lifecycle validation  
 
 Each layer has a distinct role and MUST NOT be conflated.
 
@@ -94,6 +97,7 @@ Validation MUST start with:
 | Artifact | Exact content |
 | Collection | Release membership |
 | Discovery | Service location |
+| Lifecycle (CLE) | Time-dependent lifecycle commitments |
 
 ---
 
@@ -118,6 +122,7 @@ Validation MAY apply to:
 - TEA artifacts  
 - TEA collections  
 - discovery documents  
+- lifecycle (CLE) documents  
 
 Each requires different validation steps.
 
@@ -127,7 +132,7 @@ Each requires different validation steps.
 
 A validation process typically requires:
 
-- target object (artifact, collection, or discovery)
+- target object (artifact, collection, discovery, or lifecycle document)
 - evidence bundle
 - trust anchors (DNS or configured)
 - validation policy
@@ -160,7 +165,7 @@ Evidence validation MUST be performed before any higher-level validation.
 #### Step 3 — Signature validation
 - MUST verify using certificate public key  
 - MUST cover exact target bytes  
-- MUST be consistent with the target object (artifact, collection, or discovery document)  
+- MUST be consistent with the target object (artifact, collection, discovery document, or lifecycle document)  
 
 ---
 
@@ -273,16 +278,58 @@ Discovery validation provides:
 
 ---
 
-## 9. Timestamp Validation
+## 9. Lifecycle (CLE) Validation
 
-### 9.1 Requirements
+### 9.1 Purpose
+
+Lifecycle validation verifies:
+
+> that lifecycle statements are authentic, time-bound, and version-consistent
+
+---
+
+### 9.2 Steps
+
+1. Validate lifecycle document structure  
+2. Validate lifecycle version metadata:
+   - version identifier  
+   - previous version linkage (if present)  
+3. Validate evidence bundle (embedded)  
+4. Verify signature binds to full lifecycle document  
+5. Validate timestamps  
+6. Validate transparency evidence  
+
+---
+
+### 9.3 Important rules
+
+- Lifecycle validation MUST be performed per version  
+- Each lifecycle version MUST be validated independently  
+- Lifecycle documents MUST NOT rely on external evidence bundles  
+- Lifecycle evidence MUST be embedded  
+
+---
+
+### 9.4 Result
+
+A lifecycle document is valid if:
+
+- structure is valid  
+- evidence bundle is valid  
+- version metadata is internally consistent  
+
+---
+
+## 10. Timestamp Validation
+
+### 10.1 Requirements
 
 - MUST be cryptographically valid  
 - MUST bind to signature  
 
 ---
 
-### 9.2 Checks
+### 10.2 Checks
 
 - TSA signature verification  
 - timestamp format validity  
@@ -290,7 +337,7 @@ Discovery validation provides:
 
 ---
 
-### 9.3 Policy
+### 10.3 Policy
 
 Consumers SHOULD:
 
@@ -299,9 +346,9 @@ Consumers SHOULD:
 
 ---
 
-## 10. Transparency Validation
+## 11. Transparency Validation
 
-### 10.1 Requirement
+### 11.1 Requirement
 
 Transparency validation is:
 
@@ -309,7 +356,7 @@ Transparency validation is:
 
 ---
 
-### 10.2 Supported systems
+### 11.2 Supported systems
 
 Consumers MUST support validation of:
 
@@ -320,7 +367,7 @@ SCITT MAY be supported in addition.
 
 ---
 
-### 10.3 Checks
+### 11.3 Checks
 
 - inclusion proof verification  
 - log integrity  
@@ -328,7 +375,7 @@ SCITT MAY be supported in addition.
 
 ---
 
-### 10.4 Sigsum-specific note
+### 11.4 Sigsum-specific note
 
 Consumers SHOULD verify:
 
@@ -337,9 +384,9 @@ Consumers SHOULD verify:
 
 ---
 
-## 11. DNS and Trust Anchor Validation
+## 12. DNS and Trust Anchor Validation
 
-### 11.1 Trust anchor retrieval
+### 12.1 Trust anchor retrieval
 
 Trust anchors MAY be obtained via:
 
@@ -348,14 +395,14 @@ Trust anchors MAY be obtained via:
 
 ---
 
-### 11.2 Checks
+### 12.2 Checks
 
 - certificate matches DNS anchor  
 - DNSSEC validation (if available)  
 
 ---
 
-### 11.3 WebPKI mode
+### 12.3 WebPKI mode
 
 Consumers MAY additionally verify:
 
@@ -367,11 +414,11 @@ When WebPKI is used:
 
 ---
 
-## 12. Policy Controls
+## 13. Policy Controls
 
 Validation behavior is influenced by policy.
 
-### 12.1 Policy examples
+### 13.1 Policy examples
 
 - require multiple TSAs  
 - restrict acceptable trust anchors  
@@ -379,7 +426,7 @@ Validation behavior is influenced by policy.
 
 ---
 
-### 12.2 Key reuse detection
+### 13.2 Key reuse detection
 
 Consumers SHOULD detect:
 
@@ -387,7 +434,7 @@ Consumers SHOULD detect:
 
 ---
 
-## 13. Validation Outcomes
+## 14. Validation Outcomes
 
 Validation results MUST be one of:
 
@@ -397,7 +444,7 @@ Validation results MUST be one of:
 
 ---
 
-## 14. Error Conditions
+## 15. Error Conditions
 
 Validation MUST fail when:
 
@@ -419,9 +466,9 @@ Example identifiers:
 
 ---
 
-## 15. Security Considerations
+## 16. Security Considerations
 
-### 15.1 Key reuse
+### 16.1 Key reuse
 
 Mitigated by:
 
@@ -430,7 +477,7 @@ Mitigated by:
 
 ---
 
-### 15.2 Evidence substitution
+### 16.2 Evidence substitution
 
 Mitigated by:
 
@@ -438,7 +485,7 @@ Mitigated by:
 
 ---
 
-### 15.3 Time manipulation
+### 16.3 Time manipulation
 
 Mitigated by:
 
@@ -447,7 +494,7 @@ Mitigated by:
 
 ---
 
-## 16. Normative References
+## 17. Normative References
 
 - RFC 2119 / RFC 8174  
 - RFC 5280 — X.509  
@@ -456,7 +503,7 @@ Mitigated by:
 
 ---
 
-## 17. Informative References
+## 18. Informative References
 
 - Rekor Transparency Log  
   https://github.com/sigstore/rekor  

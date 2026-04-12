@@ -42,11 +42,12 @@ The key words **MUST**, **SHOULD**, and **MAY** are to be interpreted as describ
 11. [Immutability and Reuse](#11-immutability-and-reuse)  
 12. [Relationship to Collections](#12-relationship-to-collections)  
 13. [Relationship to Discovery](#13-relationship-to-discovery)  
-14. [Normative Requirements](#14-normative-requirements)  
-15. [Error Conditions](#15-error-conditions)  
-16. [Security Considerations](#16-security-considerations)  
-17. [Normative References](#17-normative-references)  
-18. [Informative References](#18-informative-references)  
+14. [Relationship to Lifecycle (CLE)](#14-relationship-to-lifecycle-cle)  
+15. [Normative Requirements](#15-normative-requirements)  
+16. [Error Conditions](#16-error-conditions)  
+17. [Security Considerations](#17-security-considerations)  
+18. [Normative References](#18-normative-references)  
+19. [Informative References](#19-informative-references)  
 
 ---
 
@@ -113,6 +114,7 @@ Evidence bundles MAY bind to:
 - **compliance documents (treated as standalone artifacts)**
 - **TEA collections**
 - **discovery documents**
+- **lifecycle (CLE) documents**
 
 ### 3.2 Binding rule
 
@@ -341,6 +343,14 @@ This prevents:
 - substitution attacks  
 - silent modification of evidence  
 
+### 10.5 Restriction for lifecycle (CLE)
+
+Lifecycle (CLE) documents:
+
+> MUST NOT use external evidence bundles
+
+Evidence for CLE MUST be embedded within the CLE document.
+
 ---
 
 ## 11. Immutability and Reuse
@@ -373,10 +383,22 @@ Evidence bundles for collections:
 
 - MUST NOT be reused across collections  
 
-### 11.5 Rationale
+### 11.5 Lifecycle (CLE) reuse
+
+Evidence bundles for lifecycle (CLE) documents:
+
+> MUST NOT be reused across versions
+
+Each lifecycle version:
+
+- MUST have its own evidence bundle  
+- MUST be independently signed and timestamped  
+
+### 11.6 Rationale
 
 Artifacts are immutable content.  
-Collections are contextual statements.
+Collections are contextual statements.  
+Lifecycle documents are **time-dependent commitments**.
 
 ---
 
@@ -421,9 +443,47 @@ Discovery evidence is independent of:
 
 ---
 
-## 14. Normative Requirements
+## 14. Relationship to Lifecycle (CLE)
 
-### 14.1 General
+### 14.1 Lifecycle role
+
+Lifecycle (CLE) documents represent:
+
+> time-dependent statements about the state and support of a product or component
+
+### 14.2 Evidence requirements
+
+Lifecycle documents:
+
+- MUST be signed  
+- MUST include timestamps (trust architecture)  
+- MUST include transparency evidence (trust architecture)  
+
+### 14.3 Binding model
+
+The evidence bundle binds to:
+
+> the full lifecycle document for a specific version
+
+### 14.4 Independence
+
+Lifecycle evidence is independent of:
+
+- artifact evidence  
+- collection evidence  
+
+### 14.5 No reuse
+
+Each lifecycle version:
+
+- MUST have unique evidence  
+- MUST be validated independently  
+
+---
+
+## 15. Normative Requirements
+
+### 15.1 General
 
 An evidence bundle MUST:
 
@@ -435,7 +495,7 @@ An evidence bundle MUST:
 
 ---
 
-### 14.2 Binding
+### 15.2 Binding
 
 The bundle MUST:
 
@@ -444,7 +504,7 @@ The bundle MUST:
 
 ---
 
-### 14.3 Publisher validation requirement
+### 15.3 Publisher validation requirement
 
 Publisher implementations MUST:
 
@@ -454,7 +514,7 @@ Publisher implementations MUST:
 
 ---
 
-### 14.4 External references
+### 15.4 External references
 
 External bundles MUST:
 
@@ -463,7 +523,7 @@ External bundles MUST:
 
 ---
 
-## 15. Error Conditions
+## 16. Error Conditions
 
 Validation MUST fail when:
 
@@ -485,9 +545,9 @@ Example identifiers:
 
 ---
 
-## 16. Security Considerations
+## 17. Security Considerations
 
-### 16.1 Substitution attacks
+### 17.1 Substitution attacks
 
 Mitigated by:
 
@@ -495,7 +555,7 @@ Mitigated by:
 
 ---
 
-### 16.2 Key compromise
+### 17.2 Key compromise
 
 Mitigated by:
 
@@ -504,7 +564,7 @@ Mitigated by:
 
 ---
 
-### 16.3 Time manipulation
+### 17.3 Time manipulation
 
 Mitigated by:
 
@@ -513,7 +573,7 @@ Mitigated by:
 
 ---
 
-### 16.4 Transparency risks
+### 17.4 Transparency risks
 
 Mitigated by:
 
@@ -522,7 +582,7 @@ Mitigated by:
 
 ---
 
-### 16.5 WebPKI mode
+### 17.5 WebPKI mode
 
 When WebPKI is used as the trust model:
 
@@ -530,7 +590,7 @@ When WebPKI is used as the trust model:
 
 ---
 
-## 17. Normative References
+## 18. Normative References
 
 - RFC 2119 / RFC 8174  
 - RFC 5280 — X.509  
@@ -539,7 +599,7 @@ When WebPKI is used as the trust model:
 
 ---
 
-## 18. Informative References
+## 19. Informative References
 
 - Rekor Transparency Log  
 - Sigsum Transparency Log  
