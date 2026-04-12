@@ -4,6 +4,26 @@
 
 ---
 
+## Status
+
+This document defines how CI/CD systems authenticate and are authorized when interacting with a TEA service.
+
+It applies to:
+
+- Publisher API (CI/CD interactions)
+
+This specification is:
+
+- **Normative** for CI/CD authentication and authorization  
+- Applicable to both **base TEA** and the **TEA Trust Architecture (overlay)**  
+
+The key words **MUST**, **SHOULD**, and **MAY** are to be interpreted as described in:
+
+- RFC 2119  
+- RFC 8174  
+
+---
+
 ## 1. Purpose
 
 This document defines how CI/CD systems authenticate and are authorized when interacting with a TEA service.
@@ -41,7 +61,7 @@ TEA defines two completely separate identities:
 
 | Identity Type | Purpose | Lifetime |
 |--------------|--------|----------|
-| Signing identity | Signs artefacts and collections | Minutes–hours |
+| Signing identity | Signs artefacts and collections (using a private key in a key pair associated with a certificate) | Minutes–hours |
 | CI/CD identity | Authenticates to TEA API | Short-lived or managed |
 
 ---
@@ -85,24 +105,6 @@ Requirements:
 
 * certificate MUST be issued by trusted CA  
 * certificate identity MUST be mapped to TEA authorization  
-
----
-
-### 4.3 Short-Lived Token via Identity Broker
-
-CI/CD authenticates to a trusted system (e.g., Vault) and receives a short-lived token.
-
----
-
-### 4.4 Static API Keys (NOT RECOMMENDED)
-
-Allowed only for low-assurance environments.
-
-Constraints:
-
-* MUST be scoped  
-* MUST be rotatable  
-* MUST NOT allow commit operations  
 
 ---
 
@@ -200,6 +202,35 @@ CI/CD systems MAY:
 * upload signatures  
 * upload timestamps  
 * upload transparency evidence  
+* upload signing certificates associated with artefacts or collections  
+
+---
+
+### 7.1.1 Certificate Upload Semantics
+
+CI/CD systems MAY upload certificates used for signing artefacts or collections.
+
+These certificates:
+
+* are treated as data inputs  
+* MUST NOT be considered trusted by virtue of upload  
+* MUST be validated by the Publisher API service before further processing  
+
+Uploading a certificate does not:
+
+* establish trust  
+* authorize DNS publication  
+* bypass trust anchor validation  
+
+Before proceeding, the Publisher API service MUST verify that:
+
+* the uploaded certificate corresponds to the public key needed to verify the uploaded signature  
+* the uploaded signature validates against the uploaded object using that certificate  
+
+Certificates become authoritative only after:
+
+* successful validation during commit  
+* optional DNS publication (TEA-native / TAPS)  
 
 ---
 
@@ -212,6 +243,7 @@ CI/CD systems MUST NOT:
 * modify trust models  
 * override validation rules  
 * bypass policy enforcement  
+* trigger DNS publication directly  
 
 ---
 
@@ -227,6 +259,9 @@ Requirements:
 * strong authentication (e.g., MFA)  
 * audit logging  
 * explicit approval  
+
+Certificates uploaded by CI/CD MAY be used during commit-time validation  
+and MAY subsequently be published to DNS, but only as part of the authorized commit process.
 
 ---
 
@@ -368,6 +403,7 @@ TEA services MUST:
 * validate OIDC or equivalent identity  
 * enforce authorization boundaries  
 * prevent CI/CD from committing releases  
+* verify that uploaded signatures match the uploaded objects and uploaded certificates  
 
 ---
 
@@ -392,7 +428,12 @@ CI/CD pipeline starts
    - audience
    - repository / workflow
 → TEA issues short-lived upload token
-→ pipeline uploads draft artefacts
+→ pipeline uploads:
+   - artefact
+   - signature
+   - certificate
+→ TEA verifies signature against object using uploaded certificate
+→ artefact becomes eligible for commit
 → human reviews and commits
 ```
 

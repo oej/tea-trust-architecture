@@ -178,6 +178,8 @@ For each artifact:
 4. Generate timestamp(s)  
 5. Submit to a transparency log (Sigsum or Rekor)  
 6. Assemble evidence bundle  
+7. Upload artifact, signature, and certificate to the Publisher API
+9. Publisher API verifies that the signature validates against the artifact using the uploaded certificate
 
 ---
 
@@ -189,6 +191,8 @@ For each artifact:
 - transparency proof(s)  
 
 > At least one transparency log inclusion proof (Sigsum or Rekor) MUST be present for TEA Trust Architecture compliance.
+
+The Publisher API MUST verify that the signature is valid for the artifact using the included certificate before accepting the evidence bundle.
 
 ---
 
@@ -257,6 +261,7 @@ The system MUST:
 - timestamp present  
 - transparency proof present (Sigsum or Rekor)  
 - bundle digest correct
+- signature MUST validate against the artifact using the associated certificate
 
 #### 3. Enforce key uniqueness
 - public key fingerprint MUST NOT exist previously
@@ -349,7 +354,8 @@ Publisher systems MUST:
 - artifact generation  
 - signing  
 - timestamping  
-- evidence bundle creation  
+- evidence bundle creation
+- upload signing certificates associated with artefacts 
 
 ### 10.2 Not allowed in CI/CD
 
@@ -366,6 +372,23 @@ CI/CD MAY use:
 - ephemeral credentials  
 
 Secrets MUST NOT be long-lived.
+
+---
+
+### 10.4 Publisher-side validation (CRITICAL)
+
+When CI/CD uploads:
+
+- artifact  
+- signature  
+- certificate  
+
+the Publisher API MUST verify that:
+
+- the certificate corresponds to the public key used for signature verification  
+- the signature validates against the artifact  
+
+Uploads that fail validation MUST be rejected.
 
 ---
 
@@ -449,6 +472,7 @@ Before publication, the system MUST verify:
 - transparency proof exists (Sigsum or Rekor)  
 - no key reuse occurred  
 - all references resolve correctly
+- signatures match artifacts when verified with the associated certificates
 
 ---
 

@@ -3,6 +3,26 @@
 # TEA API Authentication and Authorization Profile (v1.0)
 
 ---
+## Status
+
+This document defines authentication and authorization requirements for TEA APIs.
+
+It applies to:
+
+- Consumer API (read access)  
+- Publisher API (write and commit operations)  
+
+This specification is:
+
+- **Normative** for API access control  
+- Applicable to both **base TEA** and the **TEA Trust Architecture (overlay)**  
+
+The key words **MUST**, **SHOULD**, and **MAY** are to be interpreted as described in:
+
+- RFC 2119  
+- RFC 8174  
+
+---
 
 ## 1. Purpose
 
@@ -34,6 +54,27 @@ Trust validation controls:
 * whether data is correct and valid  
 
 These MUST remain independent.
+
+---
+
+### Authentication vs Authorization
+
+TEA distinguishes between:
+
+- **Authentication** — who is making the request  
+- **Authorization** — what that identity is allowed to do  
+
+Authentication MAY be provided by:
+
+- OAuth2 / OIDC tokens  
+- Mutual TLS (mTLS)
+
+Authorization is derived from:
+
+- token claims (if present), or  
+- the authenticated identity (token subject or client certificate)
+
+Authentication alone does NOT grant permission to perform operations.
 
 ---
 
@@ -76,7 +117,6 @@ Consumer API MAY require authentication for:
 
 Supported methods:
 
-* API keys  
 * OAuth2 / OIDC  
 * mTLS  
 
@@ -134,8 +174,6 @@ CI/CD authentication MUST follow:
 
 * OIDC workload identity (RECOMMENDED)  
 * mTLS  
-* short-lived tokens  
-* static API keys (restricted environments only)  
 
 ---
 
@@ -387,6 +425,8 @@ TEA services SHOULD:
 ## 14. Final Rule
 
 > **Authentication controls access — evidence establishes trust.**
+
+Authorization controls which operations are permitted but does not establish trust in artefacts.
 
 ---
 
