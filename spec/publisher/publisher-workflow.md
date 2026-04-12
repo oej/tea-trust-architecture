@@ -174,9 +174,9 @@ For each artifact:
 
 1. Generate a new key pair  
 2. Create a certificate (< 1 hour lifetime)  
-3. Sign the artifact using the private key  
+3. Sign the artifact using the private key (from the key pair associated with the certificate)  
 4. Generate timestamp(s)  
-5. Optionally log to transparency system  
+5. Submit to a transparency log (Sigsum or Rekor)  
 6. Assemble evidence bundle  
 
 ---
@@ -184,9 +184,11 @@ For each artifact:
 ### 5.2 Evidence bundle contents
 
 - signature  
-- certificate (with public key)  
+- certificate (containing the public key)  
 - timestamp(s)  
-- transparency proof(s) (optional)  
+- transparency proof(s)  
+
+> At least one transparency log inclusion proof (Sigsum or Rekor) MUST be present for TEA Trust Architecture compliance.
 
 ---
 
@@ -202,7 +204,7 @@ If the evidence bundle is JSON:
 
 The artifact + evidence bundle becomes:
 
-> **frozen in time**
+> **frozen in time and independently verifiable without reliance on the publisher**
 
 ---
 
@@ -251,8 +253,9 @@ The system MUST:
 - digest matches stored artifact
 
 #### 2. Verify evidence bundles
-- signature valid
-- timestamp present
+- signature valid  
+- timestamp present  
+- transparency proof present (Sigsum or Rekor)  
 - bundle digest correct
 
 #### 3. Enforce key uniqueness
@@ -301,6 +304,8 @@ Artifact retrieval MAY return:
 1. Artifact only  
 2. Artifact + detached signature (multipart)  
 3. Artifact + evidence bundle (multipart)  
+
+> When an evidence bundle is provided, it includes the signature, timestamp(s), and transparency proof(s).
 
 ---
 
@@ -413,7 +418,7 @@ All critical operations MUST be logged.
 - timestamp requests  
 - transparency submissions  
 - commit decisions  
-- publication actions  
+- publication actions
 
 ---
 
@@ -441,8 +446,9 @@ Before publication, the system MUST verify:
 
 - all artifacts are valid  
 - all evidence bundles are valid  
+- transparency proof exists (Sigsum or Rekor)  
 - no key reuse occurred  
-- all references resolve correctly  
+- all references resolve correctly
 
 ---
 
@@ -494,6 +500,18 @@ Mitigated by:
 - strict commit validation  
 
 ---
+
+### 15.5 Transparency guarantees
+
+Transparency logs provide:
+
+- append-only publication guarantees  
+- detection of hidden or backdated releases  
+
+This reduces the risk of:
+
+- undetected artifact replacement  
+- selective disclosure attacks  
 
 ## 16. Normative References
 
