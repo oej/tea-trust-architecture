@@ -172,6 +172,17 @@ Detached signatures MAY exist for compatibility, but:
 - they are not sufficient for trust validation  
 - they should be included or referenced within the bundle  
 
+### 5.4 Publisher-side validation (CRITICAL)
+
+When an evidence bundle is submitted to a TEA Publisher API:
+
+- the Publisher API MUST verify that the signature validates against the target object  
+- the verification MUST use the public key contained in the certificate  
+
+Evidence bundles that fail this validation:
+
+> MUST be rejected and MUST NOT be stored or processed further  
+
 ---
 
 ## 6. Certificate Semantics
@@ -433,7 +444,17 @@ The bundle MUST:
 
 ---
 
-### 14.3 External references
+### 14.3 Publisher validation requirement
+
+Publisher implementations MUST:
+
+- verify that the signature matches the target object  
+- verify that the certificate corresponds to the signing key  
+- reject evidence bundles that fail verification  
+
+---
+
+### 14.4 External references
 
 External bundles MUST:
 

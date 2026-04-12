@@ -160,6 +160,7 @@ Evidence validation MUST be performed before any higher-level validation.
 #### Step 3 — Signature validation
 - MUST verify using certificate public key  
 - MUST cover exact target bytes  
+- MUST be consistent with the target object (artifact, collection, or discovery document)  
 
 ---
 
@@ -468,3 +469,13 @@ Mitigated by:
 
 - TEA Trust Architecture Specification  
   https://github.com/CycloneDX/transparency-exchange-api  
+
+---
+
+## Final Statement
+
+Validation in TEA ensures that:
+
+> **evidence is internally consistent, cryptographically valid, and bound to the correct object**
+
+Only after evidence validation succeeds can higher-level trust decisions be made.

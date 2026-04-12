@@ -64,7 +64,7 @@ Properties:
 
 * integrity (data has not changed)  
 * origin (which key produced it)  
-
+* The signature MUST be verifiable using the public key contained in the associated certificate and MUST correspond to the exact target object.
 ---
 
 ### 3.2 Timestamp (RFC 3161)
@@ -344,9 +344,11 @@ TEA uses certificates as:
 ```text
 artefact
   ↓
-signature
+signature (over exact artefact bytes)
   ↓
 timestamp(signature)
+  ↓
+certificate (containing public key used for verification)
   ↓
 certificate validity at time T
   ↓
@@ -366,6 +368,7 @@ transparency (optional)
 * collection signature  
 * artefact signatures  
 * discovery signature  
+* the signature MUST validate against the object using the associated certificate
 
 ---
 
@@ -388,11 +391,26 @@ transparency (optional)
 
 A consumer MUST validate:
 
-1. signature integrity  
+1. signature integrity (including verification against the object using the associated certificate)
 2. timestamp validity  
 3. certificate validity at timestamp  
 4. identity binding (DNS or PKI)  
 5. artefact inclusion in collection  
+
+---
+
+### 6.1 Publisher-side enforcement
+
+Publisher implementations MUST enforce the same binding rules at ingestion time.
+
+Before accepting an object and its evidence:
+
+- the signature MUST be verified against the object  
+- the certificate MUST correspond to the public key used for verification  
+
+Objects failing these checks MUST be rejected.
+
+This ensures that invalid bindings do not enter the TEA system.
 
 ---
 
