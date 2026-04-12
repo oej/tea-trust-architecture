@@ -104,6 +104,14 @@ Compliance documents:
 
 ---
 
+### CPE (Common Platform Enumeration)
+
+A standardized identifier format for IT products, platforms, and versions.
+
+In TEA, CPE may be used as an identifier type in API queries and object metadata.
+
+---
+
 ### CSAF (Common Security Advisory Framework)
 
 A standard for machine-readable security advisories.
@@ -291,6 +299,19 @@ A mechanism for publishing trust anchors using DNS.
 ### Trust Anchor
 
 A root of trust used to validate certificates or signatures.
+
+---
+
+### UUID (Universally Unique Identifier)
+
+A standardized 128-bit identifier used to uniquely identify TEA objects such as:
+
+- products  
+- product releases  
+- components  
+- component releases  
+- collections  
+- artifacts  
 
 ---
 
