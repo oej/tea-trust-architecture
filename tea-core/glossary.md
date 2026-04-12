@@ -1,440 +1,414 @@
-# 📘 TEA Glossary and Terminology (Normative)
-**Version:** 1.2  
-**Status:** Draft (Normative Reference)
+# 📘 TEA Terminology (Glossary)
+**Version:** 1.0  
+**Status:** Normative (Terminology Reference)
 
 ---
 
-## Table of Contents
+## Status
 
-- [1. Introduction](#1-introduction)
-- [2. Normative Language](#2-normative-language)
-- [3. Core Concepts](#3-core-concepts)
-- [4. Identity Terms](#4-identity-terms)
-- [5. Data Model Terms](#5-data-model-terms)
-- [6. Enumeration Values](#6-enumeration-values)
-- [7. Discovery Types](#7-discovery-types)
-- [8. Trust and Evidence Terms](#8-trust-and-evidence-terms)
-- [9. External Systems and Standards](#9-external-systems-and-standards)
-- [10. Prohibited Terminology](#10-prohibited-terminology)
-- [11. References](#11-references)
+This document defines the terminology used across:
+
+- TEA Core specifications  
+- TEA Trust Architecture specifications  
+
+It is **normative for terminology only**, and serves as a reference to ensure:
+
+- consistent interpretation  
+- aligned language across specifications  
+- reduced ambiguity  
 
 ---
 
 ## 1. Introduction
 
-This document defines normative terminology used across TEA specifications.
+The TEA ecosystem introduces a set of concepts spanning:
 
-```text
-All TEA specifications MUST use these terms consistently.
-```
+- software supply chain transparency  
+- cryptographic verification  
+- long-term validation  
+- distributed trust models  
 
----
-
-## 2. Normative Language
-
-The key words:
-
-```text
-MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY
-```
-
-are as defined in:
-
-- RFC 2119  
-- RFC 8174  
+This glossary provides **precise and minimal definitions** for those concepts.
 
 ---
 
-## 3. Core Concepts
-
-### TEA
-
-```text
-A specification for publishing, discovering, and retrieving software supply chain metadata and artifacts.
-```
+## 2. Terms and Definitions
 
 ---
-
-### TEA Core
-
-```text
-The base specification covering identity, discovery, API, collections, and artifacts.
-```
-
----
-
-### TEA Trust Architecture
-
-```text
-An overlay adding signatures, timestamps, transparency, and trust anchors.
-```
-
----
-
-### Publisher (Authority)
-
-```text
-The entity controlling the domain used for discovery and publication.
-```
-
----
-
-### Consumer
-
-```text
-A system retrieving and validating TEA data.
-```
-
----
-
-## 4. Identity Terms
-
-### TEI (Transparency Exchange Identifier)
-
-```text
-A URL-based identifier for a product, unique within a domain.
-```
-
----
-
-### Artifact Digest
-
-```text
-A SHA-256 hash identifying an artifact.
-```
-
----
-
-### Compliance Identifier
-
-```text
-An enumerated identifier describing a compliance document.
-```
-
----
-
-### Identity Domain
-
-```text
-A scope in which identifiers are defined (product, artifact, publisher).
-```
-
----
-
-## 5. Data Model Terms
 
 ### Artifact
 
-```text
-A binary or structured object that can be independently retrieved.
-```
+A binary or structured object distributed via TEA.
 
----
+Examples include:
 
-### Collection
+- SBOMs  
+- firmware images  
+- configuration files  
 
-```text
-A versioned metadata document describing a release.
-```
+Artifacts are:
 
----
-
-### Collection Version
-
-```text
-A specific revision of a collection.
-```
-
----
-
-### Release
-
-```text
-A version of a product identified by TEI.
-```
-
----
-
-### Lifecycle
-
-```text
-A standardized state of a product or release defined by CLE.
-```
-
----
-
-## 6. Enumeration Values
-
-### 6.1 Compliance Document Types
-
-```text
-SOC_2_TYPE_I
-SOC_2_TYPE_II
-SOC_3
-ISO_27001
-ISO_27017
-ISO_27018
-ISO_27701
-ISO_42001
-PCI_DSS
-HIPAA
-FedRAMP
-GDPR
-CSA_STAR
-NIST_800_53
-NIST_800_171
-CMMC
-HITRUST
-TISAX
-CYBER_ESSENTIALS
-CYBER_ESSENTIALS_PLUS
-```
-
----
-
-### 6.2 Collection Update Reasons
-
-```text
-updated-vex-information
-metadata-correction
-spelling-fix
-additional-context
-other
-```
-
----
-
-### 6.3 Lifecycle Values (CLE / ECMA-428)
-
-Examples:
-
-```text
-supported
-end-of-support
-end-of-security-updates
-end-of-life
-superseded
-```
-
----
-
-## 7. Discovery Types
-
-```text
-product
-service
-open-source-project
-organization
-```
-
----
-
-## 8. Trust and Evidence Terms
-
-### Signature
-
-```text
-A cryptographic operation using a private key from a key pair.
-```
+- immutable  
+- identified by digest  
+- validated using evidence bundles (in the Trust Architecture)
 
 ---
 
 ### Certificate
 
-```text
-An X.509 structure binding a public key to subject information.
-```
+A digital document binding a public key to metadata such as:
+
+- validity period  
+- DNS identity  
+
+In TEA:
+
+- certificates are short-lived  
+- act as a validity wrapper for keys  
+- do not represent long-term identity  
 
 ---
 
-### Timestamp
+### Certificate Authority (CA)
 
-```text
-A signed assertion proving that data existed at a specific time.
-```
+An entity that issues digital certificates binding public keys to identities.
 
----
+CAs are used in:
 
-### TSA (Time Stamping Authority)
-
-```text
-A service that issues RFC 3161 timestamp tokens.
-```
-
-```text
-Used for timestamping in the TEA trust architecture.
-```
+- WebPKI  
+- private PKI systems  
 
 ---
 
-### Transparency Log
+### Collection
 
-```text
-An append-only system providing public visibility of signed data.
-```
+A structured object that defines a release by grouping artifacts.
+
+A collection:
+
+- references artifacts  
+- includes metadata  
+- does not prove artifact authenticity  
+
+---
+
+### Compliance Document
+
+A document describing compliance, certification, or regulatory status of a manufacturer or project.
+
+Compliance documents:
+
+- are not tied to a specific product or release  
+- are associated with the domain owner  
+- are treated as standalone artifacts in the TEA Trust Architecture  
+
+---
+
+### CSAF (Common Security Advisory Framework)
+
+A standard for machine-readable security advisories.
+
+CSAF documents provide structured information about:
+
+- vulnerabilities  
+- affected products  
+- remediation guidance  
+
+---
+
+### Discovery Document
+
+A document retrieved via the TEA discovery process that defines:
+
+- API endpoints  
+- service capabilities  
+
+Discovery documents may be signed and timestamped in the Trust Architecture.
 
 ---
 
 ### Evidence Bundle
 
-```text
-A structured object containing signature, certificate, timestamp, and transparency evidence.
-```
+A structured object that contains all cryptographic evidence required to validate a TEA object.
+
+It includes:
+
+- signature  
+- certificate  
+- timestamp(s)  
+- transparency evidence (Sigsum or Rekor)  
+
+Evidence bundles are the **primary unit of trust** in the TEA Trust Architecture.
+
+Evidence bundles:
+
+- MUST be immutable  
+- MAY be external and referenced via SHA-256 digest  
+- MAY be reused ONLY for artifacts  
 
 ---
 
-### Binding
+### Evidence Reuse
 
-```text
-A cryptographic linkage between elements.
-```
+The reuse of an evidence bundle across multiple TEA objects.
 
----
+In TEA:
 
-## 9. External Systems and Standards
-
-### CA (Certificate Authority)
-
-```text
-An entity that issues and signs certificates.
-```
-
----
-
-### WebPKI
-
-```text
-The public certificate ecosystem used for TLS and HTTPS.
-```
-
-WebPKI includes:
-
-- public Certificate Authorities  
-- browser and operating system trust stores  
-- certificate validation rules  
-
-```text
-WebPKI may be used as one option for document signing in the TEA trust architecture.
-```
+- Evidence reuse is allowed ONLY for artifacts  
+- Evidence MUST NOT be reused for collections  
 
 ---
 
 ### PKI (Public Key Infrastructure)
 
-```text
-A general system for managing keys, certificates, and trust relationships.
-```
+A system for issuing, managing, and validating digital certificates.
+
+TEA does not define or require a full PKI.
 
 ---
 
 ### Rekor
 
-```text
-A transparency log system using Merkle trees and inclusion proofs.
-```
+A transparency log implementation developed by the Sigstore project.
 
-```text
-Used as a transparency system in the TEA trust architecture.
-```
+Rekor provides:
 
-https://github.com/sigstore/rekor
+- append-only logging of signed artifacts  
+- inclusion proofs  
+- public auditability  
+
+---
+
+### SBOM (Software Bill of Materials)
+
+A structured inventory of software components within a product.
+
+SBOMs describe:
+
+- components  
+- dependencies  
+- versions  
+- identifiers  
+
+---
+
+### Sigstore
+
+An open-source project providing tools and services for signing and verifying software artifacts.
+
+Sigstore includes:
+
+- Rekor (transparency log)  
+- Fulcio (certificate authority)  
+- Cosign (signing tool)  
 
 ---
 
 ### Sigsum
 
-```text
-A transparency log system using log signatures and witness cosigning.
-```
+A transparency log system designed for:
 
-```text
-Used as a transparency system in the TEA trust architecture.
-```
+- minimal trust assumptions  
+- witness-based verification  
 
-https://www.sigsum.org
+Sigsum uses:
 
----
-
-### SCITT
-
-```text
-A framework for supply chain transparency using signed receipts.
-```
-
-https://datatracker.ietf.org/wg/scitt/
+- append-only logs  
+- witness cosigning  
+- cryptographic proofs of inclusion  
 
 ---
 
-### DNSSEC
+### TEA (Transparency Exchange API)
 
-```text
-A system for authenticated DNS data.
-```
+A specification for exchanging software transparency information across the software supply chain.
+
+TEA defines:
+
+- APIs for publishing and retrieving artifacts  
+- collections representing releases  
+- discovery mechanisms using TEI  
 
 ---
 
-### CAA
+### TEA Artifact
 
-```text
-A DNS mechanism specifying allowed certificate authorities.
-```
+See **Artifact**.
+
+---
+
+### TEA Collection
+
+See **Collection**.
+
+---
+
+### TEA Service
+
+A service implementing TEA APIs for:
+
+- publishing  
+- discovery  
+- retrieval  
+
+---
+
+### TEI (Transparency Exchange Identifier)
+
+A URI-based identifier used to locate TEA services and resources.
+
+A TEI:
+
+- identifies a product  
+- is scoped to a domain  
+- may include an optional version parameter  
+
+---
+
+### Timestamp Authority (TSA)
+
+A service that issues cryptographic timestamps proving that data existed at a specific point in time.
+
+---
+
+### Transparency Log
+
+An append-only log that provides public verifiability of signing events.
+
+Supported systems:
+
+- Sigsum  
+- Rekor  
+
+---
+
+### TAPS (Trust Anchor Publication Service)
+
+A mechanism for publishing trust anchors using DNS.
+
+---
+
+### Trust Anchor
+
+A root of trust used to validate certificates or signatures.
+
+---
+
+### VEX (Vulnerability Exploitability eXchange)
+
+A document format describing the exploitability status of vulnerabilities in software.
+
+VEX documents indicate whether a vulnerability:
+
+- is exploitable  
+- is not exploitable  
+- has mitigations  
+
+---
+
+### WebPKI (Web Public Key Infrastructure)
+
+A global system of certificate authorities used to establish trust in TLS connections.
+
+In TEA:
+
+- WebPKI MAY be used as a signing model  
+- When WebPKI is used, evidence bundles are not included  
 
 ---
 
 ### X.509
 
-```text
-A standard for public key certificates.
-```
+A standard defining the format of public key certificates.
+
+X.509 certificates are used to:
+
+- bind public keys to identities  
+- define validity periods  
+- support cryptographic verification  
 
 ---
 
-### SHA-256
+## 3. References
 
-```text
-A cryptographic hash function used for artifact identity.
-```
+- RFC 2119 — Key words for use in RFCs to Indicate Requirement Levels  
+  https://www.rfc-editor.org/rfc/rfc2119  
 
----
+- RFC 8174 — Ambiguity of Uppercase vs Lowercase in RFC 2119 Keywords  
+  https://www.rfc-editor.org/rfc/rfc8174  
 
-## 10. Prohibited Terminology
+- RFC 3986 — Uniform Resource Identifier (URI): Generic Syntax  
+  https://www.rfc-editor.org/rfc/rfc3986  
 
-### Artifact Identifier
-
-```text
-Artifacts are identified by digest only.
-```
-
----
-
-### Mutable Artifact
-
-```text
-Artifacts are immutable.
-```
-
----
-
-### Implicit Trust
-
-```text
-No object is trusted without validation.
-```
-
----
-
-## 11. References
-
-- RFC 2119 — Normative Language  
-- RFC 8174 — Normative Language Clarification  
-- RFC 3986 — URI Syntax  
 - RFC 4648 — Base64URL Encoding  
-- RFC 5280 — X.509 Certificates  
-- RFC 3161 — Time-Stamp Protocol  
-- RFC 4033–4035 — DNSSEC  
-- RFC 8659 — CAA  
+  https://www.rfc-editor.org/rfc/rfc4648  
+
+- RFC 5280 — Internet X.509 Public Key Infrastructure Certificate and CRL Profile  
+  https://www.rfc-editor.org/rfc/rfc5280  
+
+- RFC 3161 — Time-Stamp Protocol (TSP)  
+  https://www.rfc-editor.org/rfc/rfc3161  
+
+- RFC 4033–4035 — DNS Security Extensions (DNSSEC)  
+  https://www.rfc-editor.org/rfc/rfc4033  
+  https://www.rfc-editor.org/rfc/rfc4034  
+  https://www.rfc-editor.org/rfc/rfc4035  
+
+- RFC 8659 — DNS Certification Authority Authorization (CAA) Resource Record  
+  https://www.rfc-editor.org/rfc/rfc8659  
+
 - RFC 9110 — HTTP Semantics  
-- FIPS 180-4 — SHA-256  
-- ECMA-428 — Common Lifecycle Enumeration  
+  https://www.rfc-editor.org/rfc/rfc9110  
+
+- FIPS 180-4 — Secure Hash Standard (SHA-256)  
+  https://csrc.nist.gov/publications/detail/fips/180/4/final  
+
+- ECMA-428 — Common Lifecycle Enumeration (CLE)  
+  https://ecma-international.org/publications-and-standards/standards/ecma-428/  
+
+- ECMA-424 — CycloneDX (Software Bill of Materials)  
+  https://ecma-international.org/publications-and-standards/standards/ecma-424/  
+
+- ECMA-427 — Package URL (PURL)  
+  https://ecma-international.org/publications-and-standards/standards/ecma-427/
+
+## 4. Alphabetical Index
+
+- [Artifact](#artifact)  
+- [Certificate](#certificate)  
+- [Certificate Authority (CA)](#certificate-authority-ca)  
+- [Collection](#collection)  
+- [Compliance Document](#compliance-document)  
+- [CSAF (Common Security Advisory Framework)](#csaf-common-security-advisory-framework)  
+- [Discovery Document](#discovery-document)  
+- [Evidence Bundle](#evidence-bundle)  
+- [Evidence Reuse](#evidence-reuse)  
+- [PKI (Public Key Infrastructure)](#pki-public-key-infrastructure)  
+- [Rekor](#rekor)  
+- [SBOM (Software Bill of Materials)](#sbom-software-bill-of-materials)  
+- [Sigstore](#sigstore)  
+- [Sigsum](#sigsum)  
+- [TEA (Transparency Exchange API)](#tea-transparency-exchange-api)  
+- [TEA Artifact](#tea-artifact)  
+- [TEA Collection](#tea-collection)  
+- [TEA Service](#tea-service)  
+- [TEI (Transparency Exchange Identifier)](#tei-transparency-exchange-identifier)  
+- [Timestamp Authority (TSA)](#timestamp-authority-tsa)  
+- [Transparency Log](#transparency-log)  
+- [TAPS (Trust Anchor Publication Service)](#taps-trust-anchor-publication-service)  
+- [Trust Anchor](#trust-anchor)  
+- [VEX (Vulnerability Exploitability eXchange)](#vex-vulnerability-exploitability-exchange)  
+- [WebPKI (Web Public Key Infrastructure)](#webpki-web-public-key-infrastructure)  
+- [X.509](#x509)  
 
 ---
+
+## Final Note
+
+This glossary is intentionally:
+
+- concise  
+- consistent  
+- aligned with TEA specifications  
+
+Normative behavior is defined in the respective specification documents.
