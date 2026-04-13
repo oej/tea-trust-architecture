@@ -1,5 +1,5 @@
 # 📘 **TEA Publisher Implementation Guide (Final, Expanded Edition)**  
-**Creation, Signing, Validation, and Publication of TEA Releases**
+**Creation, Signing, Validation, and Publication of TEA Releases and Lifecycle Data**
 
 ---
 
@@ -11,6 +11,7 @@ A TEA publisher implementation is responsible for:
 
 - defining products, components, and releases  
 - managing artefacts such as SBOMs and VEX documents  
+- managing lifecycle (CLE) documents  
 - assembling and signing collections  
 - validating trust evidence  
 - enforcing controlled publication workflows  
@@ -35,6 +36,7 @@ With a standardized API:
 
 - SBOM generators can upload artefacts directly  
 - signing tools can integrate without vendor-specific logic  
+- lifecycle management systems can publish CLE updates  
 - validation tools can be reused across implementations  
 
 Without it:
@@ -55,11 +57,12 @@ A TEA publisher fits naturally into modern pipelines:
 5. sign  
 6. approve  
 7. publish  
+8. publish lifecycle updates (CLE)
 
 A standardized API allows:
 
 - full automation up to the approval boundary  
-- reproducible release processes  
+- reproducible release and lifecycle processes  
 
 ---
 
@@ -72,7 +75,7 @@ Organizations may separate:
 
 A standardized API allows:
 
-- transfer of artefacts and collections  
+- transfer of artefacts, collections, and CLE documents  
 - interoperability across implementations  
 - outsourcing publication to third-party providers  
 
@@ -90,7 +93,7 @@ A structured publisher API enables:
 
 - auditable workflows  
 - reproducible releases  
-- verifiable publication  
+- verifiable lifecycle commitments  
 
 ---
 
@@ -99,6 +102,11 @@ A structured publisher API enables:
 A key principle:
 
 > A release is defined by a **published, signed collection**, not by the existence of artefacts.
+
+Lifecycle (CLE) data:
+
+- does not redefine a release  
+- augments it over time  
 
 This ensures:
 
@@ -126,6 +134,13 @@ A compliant implementation MUST require:
 - transparency receipt  
 - DNS-based trust anchor  
 
+For CLE:
+
+- signature  
+- timestamp  
+- transparency (policy-driven)  
+- DNS anchor (TEA-native)
+
 These elements together provide:
 
 | Property | Mechanism |
@@ -151,6 +166,8 @@ Implementation SHOULD:
 - validate CAA records  
 - support DNSSEC  
 
+CLE follows the same trust model constraints.
+
 ---
 
 ## **5. Dual-Level Signing — Why It Matters**
@@ -165,10 +182,18 @@ TEA uses two signatures intentionally.
 
 > “These artefacts together define a release.”
 
+### **CLE signature**
+
+> “This lifecycle statement is issued by this publisher at this time.”
+
 Without collection signing:
 
 - artefacts could be mixed  
 - releases could be ambiguous  
+
+Without CLE signing:
+
+- lifecycle changes could be forged or disputed  
 
 ---
 
@@ -176,21 +201,77 @@ Without collection signing:
 
 JSON must be canonicalized before signing.
 
-Example:
-
-Two JSON documents may be logically identical but produce different signatures due to:
-
-- whitespace  
-- field order  
-
 Solution:
 
 - use **RFC 8785 canonicalization**  
 - always sign canonical form  
 
----
+Applies to:
 
-## **7. Certificate Design — Identity and Continuity**
+- discovery  
+- artefacts  
+- collections  
+- CLE documents  
+
+---
+## ** 7. Discovery Signing (Publisher Responsibility)**
+
+The publisher MUST implement signing of the discovery document (`.well-known/tea`).
+
+Discovery signing is required to establish **trust in endpoint selection**.
+
+### Purpose
+
+Discovery signing provides:
+
+- authorization of API endpoints
+- binding between manufacturer domain and TEA service
+- trust bootstrap for all subsequent validation
+
+### Requirements
+
+A compliant implementation MUST:
+
+- generate a short-lived signing key (≤24h)
+- produce a self-signed certificate
+- canonicalize discovery JSON (RFC 8785)
+- sign the canonical form using Ed25519
+- attach:
+  - signature
+  - signing certificate
+  - timestamp (REQUIRED)
+
+### Trust Model Behavior
+
+For TEA-native:
+
+- discovery signing certificate MAY be published in DNS
+- DNS validation MAY be applied by consumers
+
+For WebPKI:
+
+- TLS validation provides the primary trust anchor
+- discovery signature still protects integrity and authorization
+
+### Separation of Concerns
+
+Discovery signing is **independent** from:
+
+- artefact signing
+- collection signing
+- CLE signing
+
+Each serves a different trust purpose.
+
+### Reference
+
+The detailed discovery signing workflow is defined in:
+
+- TEA Trust Architecture — End-to-End Example
+- Discovery specification
+
+
+## **8. Certificate Design — Identity and Continuity**
 
 Certificates act as **identity anchors**, not just cryptographic wrappers.
 
@@ -202,37 +283,30 @@ Certificates act as **identity anchors**, not just cryptographic wrappers.
 
 - one third-party SAN DNS  
 
-Example:
+Applies to:
 
-```
-SAN:
-  manufacturer.example.com
-  archive.example.net   (optional)
-```
-
-This enables:
-
-- primary trust anchor  
-- long-term availability via third party  
+- artefact signing  
+- collection signing  
+- CLE signing  
 
 ---
 
-## **8. Key Management — Short-Lived by Design**
+## **9. Key Management — Short-Lived by Design**
 
 Keys should be:
 
 - ephemeral  
 - short-lived (hours to ≤24h)  
 
-Why:
+Applies to:
 
-- eliminates revocation complexity  
-- limits exposure window  
-- aligns with modern signing practices  
+- artefact signing keys  
+- collection signing keys  
+- CLE signing keys  
 
 ---
 
-## **9. Evidence — Making Trust Durable**
+## **10. Evidence — Making Trust Durable**
 
 ### Transparency
 
@@ -247,9 +321,11 @@ Together:
 - ensure long-term validation  
 - protect against backdating or suppression  
 
+Applies equally to CLE.
+
 ---
 
-## **10. Validation — Where Trust is Enforced**
+## **11. Validation — Where Trust is Enforced**
 
 Validation is the most critical responsibility.
 
@@ -259,6 +335,7 @@ The implementation MUST reject:
 - mismatched payloads  
 - missing evidence  
 - incorrect certificates  
+- invalid CLE version chains  
 
 This is where:
 
@@ -266,7 +343,7 @@ This is where:
 
 ---
 
-## **11. Artifact Lifecycle — Controlled Exposure**
+## **12. Artifact Lifecycle — Controlled Exposure**
 
 Artifacts must not be exposed prematurely.
 
@@ -280,35 +357,49 @@ Artifacts must not be exposed prematurely.
 
 ---
 
-### Example
+## **13. CLE Lifecycle Management**
 
-```text
-Upload SBOM → draft → not visible
-Add to collection → still draft
-Publish collection → SBOM becomes published
-```
+CLE introduces a **versioned lifecycle stream**.
+
+Rules:
+
+- each CLE document MUST include a version  
+- updates MUST reference previous version  
+- history MUST be preserved  
+- no overwriting allowed  
 
 ---
 
-## **12. Garbage Collection — Managing Unused Data**
+### Example
+
+```text
+v1 → published
+v2 → extends support
+v3 → marks end-of-life
+```
+
+All versions remain accessible.
+
+---
+
+## **14. Garbage Collection — Managing Unused Data**
 
 Implementations MAY:
 
-- delete draft artefacts after a retention period  
+- delete draft artefacts  
 
-Example:
+Implementations MAY:
 
-```text
-Artifact uploaded → never used → deleted after 7 days
-```
+- delete unreferenced draft CLE documents  
 
 MUST NOT:
 
 - delete published artefacts  
+- delete published CLE history  
 
 ---
 
-## **13. Collection Workflow — Step-by-Step**
+## **15. Collection Workflow — Step-by-Step**
 
 1. create draft collection  
 2. add artefacts  
@@ -322,9 +413,29 @@ MUST NOT:
 
 ---
 
-## **14. Approval and Commit — The Trust Boundary**
+## **16. CLE Workflow — Step-by-Step**
+
+1. create draft CLE document  
+2. assign version and previousVersion  
+3. canonicalize payload  
+4. sign externally  
+5. timestamp  
+6. add transparency proof  
+7. upload signed CLE  
+8. validate  
+9. approve  
+10. publish  
+
+---
+
+## **17. Approval and Commit — The Trust Boundary**
 
 Everything before commit can be automated.
+
+Applies to:
+
+- collections  
+- CLE documents  
 
 Commit:
 
@@ -332,167 +443,99 @@ Commit:
 - MUST require authorization  
 - SHOULD support multi-party approval  
 
-Example:
-
-```text
-CI prepares → human approves → system commits
-```
-
 ---
 
-## **15. DNS Trust Anchoring (TEA-Native)**
+## **18. DNS Trust Anchoring (TEA-Native)**
 
 Certificates are published via DNS CERT.
 
-Requirements:
+Applies to:
 
-- SAN must match DNS name  
-- DNSSEC SHOULD be enabled  
+- artefact signing certificates  
+- collection signing certificates  
+- CLE signing certificates  
 
 ---
 
-## **16. Discovery Interaction**
+## **19. Discovery Interaction**
 
 Discovery must:
 
 - use HTTPS (TLS 1.3)  
 - align with trust model  
 
-> Discovery structure is defined separately.
+---
+
+## **20. Archival — Long-Term Retention**
+
+Objects may be archived:
+
+- artefacts  
+- collections  
+- CLE documents  
 
 ---
 
-## **17. Archival — Long-Term Retention**
-
-Objects may be archived.
-
-Archival means:
-
-- retained  
-- not active  
-- still accessible  
-
----
-
-## **18. Logging and Audit — Full Traceability**
+## **21. Logging and Audit — Full Traceability**
 
 All actions MUST be logged.
 
-Example log entry:
-
-```json
-{
-  "eventId": "TEA-PUB-COLLECTION-PUBLISH",
-  "actor": "alice@example.com",
-  "timestamp": "2026-04-07T16:00:00Z",
-  "objectId": "col-123",
-  "result": "success"
-}
-```
-
 ---
 
-## **19. Audit Event Identifiers**
-
-Standard identifiers enable interoperability.
+### **21.1 Audit Event Identifiers**
 
 Examples:
 
 - TEA-PUB-ARTIFACT-UPLOAD  
 - TEA-PUB-COLLECTION-PUBLISH  
+- TEA-PUB-CLE-PUBLISH  
 - TEA-PUB-COMMIT  
 
 ---
 
-## **20. Webhooks — Event-Driven Integration**
+## **22. Webhooks — Event-Driven Integration**
 
-Webhooks allow external systems to react to events.
+Include CLE-related events.
 
 ---
 
-### Example: Signing workflow
+### Example
 
 ```json
 {
-  "event": "collection.readyForSigning",
-  "collectionId": "col-123"
+  "event": "cle.readyForSigning",
+  "entityId": "example-product@1.0.0",
+  "version": 2
 }
 ```
 
 ---
 
-### Example: Authorization error webhook
-
-```json
-{
-  "event": "authorization.error",
-  "timestamp": "2026-04-07T16:05:00Z",
-  "actor": "ci-system",
-  "action": "collection.publish",
-  "objectId": "col-123",
-  "reason": "insufficient privileges",
-  "requiredRole": "release-approver"
-}
-```
-
----
-
-### Example: Approval required
-
-```json
-{
-  "event": "collection.approvalRequired",
-  "collectionId": "col-123"
-}
-```
-
----
-
-## **21. Error Handling — Fail Closed**
+## **23. Error Handling — Fail Closed**
 
 The system MUST reject operations on:
 
 ### Validation errors
 - invalid signatures  
 - invalid evidence  
+- invalid CLE version chain  
 
 ### Authorization errors
 - insufficient permissions  
 - missing approvals  
-- missing MFA  
 
 ### State errors
 - invalid transitions  
 
 ---
 
-### Example authorization failure
-
-```text
-Attempt: publish collection
-User: CI system
-Result: denied
-Reason: requires human approval
-```
-
----
-
-### Requirements
-
-Errors MUST:
-
-- be returned to caller  
-- be logged  
-- trigger webhook if configured  
-
----
-
-## **22. Security Guarantees**
+## **24. Security Guarantees**
 
 If correctly implemented:
 
 - artefacts are authentic  
 - releases are well-defined  
+- lifecycle state is authentic and versioned  
 - trust is verifiable  
 - workflows are controlled  
 - actions are auditable  
@@ -508,4 +551,5 @@ It is a **system of record for software transparency**, where:
 - trust is created through signatures  
 - integrity is enforced through validation  
 - publication is controlled through approval  
+- lifecycle is tracked through CLE  
 - and everything is auditable

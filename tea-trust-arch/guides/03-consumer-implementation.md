@@ -1,6 +1,6 @@
-# 📘 TEA Consumer Implementation Guide
+# 📘 TEA Consumer Trust Architecture Implementation Guide
 
-Validation of Discovery, Collections, and Artefacts
+Validation of Discovery, Collections, Artefacts, and Lifecycle (CLE)
 
 ---
 
@@ -12,6 +12,7 @@ This document defines how a consumer retrieves and validates TEA data, including
 - validation of discovery authorization  
 - retrieval of TEA collections and artefacts  
 - validation of artefact authenticity and release binding  
+- validation of lifecycle (CLE) state and history  
 - long-term validation of evidence  
 
 The goal is to ensure that a consumer can independently verify:
@@ -20,6 +21,7 @@ The goal is to ensure that a consumer can independently verify:
 - that they were not modified  
 - that they belong to a specific release  
 - that they remain valid over time  
+- what lifecycle state applies and how it evolved  
 
 ---
 
@@ -57,6 +59,9 @@ Ensures secure communication (TLS).
 ### Artefact Trust
 Determines whether data is authentic and valid.
 
+### Lifecycle Trust (CLE)
+Determines lifecycle state and historical changes over time.
+
 ---
 
 ## 4. High-Level Validation Flow
@@ -76,6 +81,8 @@ A consumer MUST perform:
 11. Validate timestamps  
 12. Validate transparency  
 13. Store validation evidence  
+14. Retrieve lifecycle (CLE) documents (if applicable)  
+15. Validate CLE signature, timestamp, and version chain  
 
 Each step MUST succeed.
 
@@ -395,7 +402,61 @@ Short-lived keys DO NOT limit long-term trust.
 
 ---
 
-## 18. Trust Model Differences
+## 18. Lifecycle (CLE) Validation
+
+Consumers MAY retrieve lifecycle (CLE) documents for:
+
+- product  
+- product release  
+- component  
+- component release  
+
+### Requirements
+
+For each CLE document, the consumer MUST:
+
+- validate signature  
+- validate timestamp  
+- resolve trust anchor  
+- validate SAN fingerprint (TEA-native)  
+- validate transparency (if required by policy)  
+
+### Version Chain Validation (CRITICAL)
+
+Consumers MUST verify:
+
+- version numbers are monotonic  
+- previousVersion references are correct  
+- no gaps or rewrites exist  
+
+If:
+
+- version chain is broken  
+
+→ MUST reject lifecycle trust  
+
+### Interpretation
+
+CLE does NOT change:
+
+- artefact authenticity  
+- release integrity  
+
+CLE DOES provide:
+
+- lifecycle state (active, deprecated, EOL)  
+- forward-looking commitments  
+- audit trail of lifecycle changes  
+
+Consumers MAY use CLE to:
+
+- enforce policy (e.g. reject EOL products)  
+- assess operational risk  
+- support compliance decisions  
+
+---
+
+## 19. Trust Model Differences
 
 ### TEA-Native
 
@@ -404,6 +465,7 @@ Short-lived keys DO NOT limit long-term trust.
 - certificates: short-lived  
 - timestamps: REQUIRED  
 - transparency: REQUIRED  
+- CLE: MUST follow same validation model  
 
 ---
 
@@ -416,10 +478,11 @@ Short-lived keys DO NOT limit long-term trust.
 
 - timestamps: SHOULD  
 - transparency: policy dependent  
+- CLE: MUST follow same validation model  
 
 ---
 
-## 19. Error Handling
+## 20. Error Handling
 
 Consumers MUST fail closed.
 
@@ -435,10 +498,13 @@ Consumers MUST fail closed.
 - BINDING_FAILED  
 - TIMESTAMP_INVALID  
 - TRANSPARENCY_INVALID  
+- CLE_SIGNATURE_INVALID  
+- CLE_VERSION_CHAIN_INVALID  
+- CLE_TIMESTAMP_INVALID  
 
 ---
 
-## 20. Logging
+## 21. Logging
 
 Consumers SHOULD log:
 
@@ -451,7 +517,7 @@ Consumers SHOULD log:
 
 ---
 
-## 21. Performance Considerations
+## 22. Performance Considerations
 
 Consumers MAY:
 
@@ -465,7 +531,7 @@ Consumers MUST:
 
 ---
 
-## 22. Security Requirements
+## 23. Security Requirements
 
 Consumers MUST:
 
@@ -482,18 +548,19 @@ Consumers MUST NOT:
 
 ---
 
-## 23. Security Guarantees
+## 24. Security Guarantees
 
 If all validation succeeds:
 
 - artefacts are authentic  
 - release composition is correct  
+- lifecycle state is authentic and auditable  
 - tampering is detectable  
 - historical validity is preserved  
 
 ---
 
-## 24. Failure Scenarios
+## 25. Failure Scenarios
 
 - service compromise → signatures prevent forgery  
 - DNS attack → DNSSEC mitigates (if used)  
@@ -503,7 +570,7 @@ If all validation succeeds:
 
 ---
 
-## 25. Minimal Consumer Profile
+## 26. Minimal Consumer Profile
 
 - TLS validation  
 - collection signature validation  
@@ -512,7 +579,7 @@ If all validation succeeds:
 
 ---
 
-## 26. Recommended Consumer Profile
+## 27. Recommended Consumer Profile
 
 - DNSSEC validation  
 - timestamp validation  
@@ -521,7 +588,7 @@ If all validation succeeds:
 
 ---
 
-## 27. High-Assurance Profile (CRA-aligned)
+## 28. High-Assurance Profile (CRA-aligned)
 
 - full validation  
 - long-term evidence storage  

@@ -1,6 +1,44 @@
 # 📘 TEA CI/CD Toolchain Guide
 
-With Gated Publication, Trust-Model Enforcement, and Ephemeral Signing
+With Gated Publication, Trust-Model Enforcement, Ephemeral Signing, and Lifecycle (CLE) Support
+
+---
+## Status
+
+This document is part of the **TEA Trust Architecture** document set.
+
+Status: **Draft**
+
+This guide is **non-normative** and provides implementation guidance for CI/CD systems that prepare and submit TEA data for publication.
+
+It defines recommended practices for:
+
+- release preparation and gated publication workflows  
+- enforcement of trust model constraints (`tea-native`, `webpki`)  
+- use of ephemeral signing keys and short-lived certificates  
+- integration of timestamps and transparency systems  
+- handling and versioning of lifecycle (CLE) documents  
+
+Normative definitions for:
+
+- API behavior  
+- data structures  
+- discovery  
+- trust validation  
+
+are specified in:
+
+- the TEA OpenAPI specification  
+- the TEA Core specifications (`tea-core`)  
+- the TEA Trust Architecture specifications (`tea-trust-arch`)  
+
+If inconsistencies arise, those specifications take precedence.
+
+This document may be updated as:
+
+- CI/CD integration patterns evolve  
+- lifecycle (CLE) support is refined  
+- additional validation and transparency mechanisms are adopted  
 
 ---
 
@@ -14,6 +52,7 @@ This guide defines a CI/CD workflow for TEA that:
 - enforces correct handling of trust models  
 - ensures DNS publication is performed only when appropriate  
 - enforces ephemeral key usage and multi-anchor trust validation  
+- supports lifecycle (CLE) publication and validation workflows  
 
 ---
 
@@ -77,6 +116,7 @@ This rule MUST be enforced in both CI/CD logic and TEA service policy.
 7. (Optional) Upload DNS publication candidate  
 8. Human commit with MFA  
 9. Conditional DNS publication based on trust model  
+10. Optional lifecycle (CLE) update workflow  
 
 ---
 
@@ -91,6 +131,7 @@ This rule MUST be enforced in both CI/CD logic and TEA service policy.
 - obtain timestamps  
 - submit to transparency logs  
 - upload draft  
+- optionally prepare CLE documents  
 
 ### 6.2 Commit Phase (Human-Controlled)
 
@@ -98,6 +139,7 @@ This rule MUST be enforced in both CI/CD logic and TEA service policy.
 - approve publication (MFA)  
 - optionally approve DNS publication  
 - finalize release  
+- approve lifecycle (CLE) publication if included  
 
 ---
 
@@ -323,6 +365,7 @@ CI/CD uploads:
 - timestamps  
 - transparency receipts  
 - evidence bundles (if used)  
+- signing certificates used for validation and DNS publication  
 
 ---
 
@@ -373,6 +416,81 @@ DNS candidate MUST NOT exist
 
 ---
 
+## 10.1 Lifecycle (CLE) Publication
+
+CI/CD systems MAY prepare lifecycle (CLE) documents for:
+
+- product  
+- product release  
+- component  
+- component release  
+
+### Rules
+
+- CLE updates MUST follow a versioned model  
+- each update MUST produce a new version  
+- previous versions MUST remain accessible  
+
+### Signing
+
+CLE documents MUST be:
+
+- signed using the same model as collections  
+- timestamped  
+- optionally submitted to transparency systems  
+
+### Evidence
+
+CLE documents:
+
+- MUST include internal evidence  
+- MUST NOT require external evidence bundles  
+
+### CI/CD Responsibility
+
+CI/CD MAY:
+
+- generate CLE documents  
+- sign CLE documents  
+- upload as draft  
+
+CI/CD MUST NOT:
+
+- publish CLE updates without human approval  
+
+### Commit Requirements
+
+At commit time:
+
+- CLE signature MUST be validated  
+- certificate MUST match uploaded certificate  
+- timestamp MUST be valid  
+
+---
+
+### Versioning Constraints (CRITICAL)
+
+Each CLE update MUST:
+
+- increment version  
+- reference previous version  
+
+If violated:
+
+→ publication MUST be rejected  
+
+---
+
+### Audit Requirements
+
+All CLE updates MUST be logged with:
+
+- version  
+- timestamp  
+- reason for change  
+
+---
+
 ## 11. Stage — Commit Phase
 
 A human with MFA MUST:
@@ -419,6 +537,7 @@ System MUST validate:
 System MUST verify:
 
 - certificate matches signing key  
+- uploaded certificate matches signature on objects  
 - SAN format is correct  
 - fingerprint matches public key  
 - certificate validity window  
@@ -498,6 +617,10 @@ System MUST reject and log:
 - MISSING_TIMESTAMP  
 - TRANSPARENCY_SUBMISSION_FAILED  
 - AUTHORIZATION_FAILED  
+- CLE_VERSION_INVALID  
+- CLE_SIGNATURE_INVALID  
+- CLE_TIMESTAMP_INVALID  
+- CERTIFICATE_SIGNATURE_MISMATCH  
 
 ---
 
@@ -509,6 +632,7 @@ CI/CD systems MUST log:
 - timestamp  
 - release identifier  
 - operation type  
+- CLE version changes (if applicable)  
 
 Implementations SHOULD:
 
@@ -582,6 +706,7 @@ CI/CD SHOULD:
 - private keys MUST be ephemeral and MUST NOT be retained  
 - SAN MUST contain fingerprint-derived DNS name  
 - timestamp MUST prove certificate validity at signing time  
+- CLE updates MUST be versioned and auditable  
 
 ---
 

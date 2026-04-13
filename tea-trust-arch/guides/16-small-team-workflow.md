@@ -2,14 +2,40 @@
 ## Small Company / Open Source Project  
 ### (Ephemeral TEA-Native Model)
 
+---
 
 ## Status
 
-This document is informative and provides a recommended implementation
-workflow for small teams and open source projects using the TEA trust architecture.
+This document is part of the **TEA Trust Architecture** document set.
 
-Normative requirements are defined in the TEA Core Trust Architecture
-and related specifications.
+Status: **Draft**
+
+This guide is **non-normative** and provides recommended implementation practices for small teams and open source projects using the TEA trust architecture with the TEA-native trust model.
+
+Normative requirements are defined in:
+
+- TEA Core specifications (`tea-core`)  
+- TEA Trust Architecture specifications (`tea-trust-arch`)  
+- TEA OpenAPI specification  
+
+In case of conflict, those specifications take precedence.
+
+---
+
+## Table of Contents
+
+- [1. Goal](#1-goal)
+- [2. Operating Model](#2-operating-model)
+- [3. One-Time Setup](#3-one-time-setup)
+  - [3.1 Choose Trust Domains](#31-choose-trust-domains)
+  - [3.2 Configure DNS](#32-configure-dns)
+- [4. Release Workflow (End-to-End)](#4-release-workflow-end-to-end)
+- [5. Consumer Validation (What Will Happen)](#5-consumer-validation-what-will-happen)
+- [6. Security Best Practices](#6-security-best-practices)
+- [7. Common Mistakes](#7-common-mistakes)
+- [8. Minimal Implementation Path](#8-minimal-implementation-path)
+- [9. Summary](#9-summary)
+- [10. One-Line Takeaway](#10-one-line-takeaway)
 
 ---
 
@@ -26,6 +52,7 @@ It shows how to:
 * obtain trusted timestamps  
 * publish TEA-native trust anchors in DNS  
 * publish to a TEA service  
+* manage lifecycle (CLE) information over time  
 
 ---
 
@@ -50,6 +77,7 @@ You will use:
 * a **trusted timestamp** (proof of when signing occurred)  
 * a **transparency log** (proof of existence and auditability)  
 * **DNS publication** (TEA-native trust anchor distribution)  
+* **lifecycle (CLE) documents** (state and evolution over time)  
 
 ---
 
@@ -442,6 +470,8 @@ The evidence bundle allows:
 * long-term verification  
 * auditability  
 
+For lifecycle (CLE), only internal evidence is required.
+
 ---
 
 ### Step 13: Upload Draft Release
@@ -462,12 +492,54 @@ A human MUST approve:
 * signatures  
 * timestamps  
 * DNS publication  
+* certificate used for signing matches uploaded certificate  
+* lifecycle updates (if any) are valid and versioned  
 
 ---
 
 ### Critical Security Principle
 
 > **CI/CD prepares — humans authorize — TEA commits**
+
+---
+
+### Step 15: (Optional) Publish Lifecycle (CLE) Information
+
+If lifecycle information is maintained, the project MAY publish CLE documents for:
+
+- product  
+- product release  
+- component  
+- component release  
+
+#### Requirements
+
+Each CLE update MUST:
+
+- be versioned  
+- reference the previous version  
+- be signed  
+- be timestamped  
+
+#### Important Distinction
+
+CLE documents:
+
+- do NOT change released artefacts  
+- do NOT change the collection  
+- provide **lifecycle state and evolution only**
+
+#### Examples
+
+- marking a product as deprecated  
+- declaring end-of-life (EOL)  
+- extending support timelines  
+
+#### Publication Model
+
+- CLE updates MAY be prepared in CI/CD  
+- MUST be approved before publication  
+- MUST remain accessible for historical comparison  
 
 ---
 
@@ -485,6 +557,7 @@ A consumer will:
 8. validate timestamp  
 9. validate transparency  
 10. derive final trust decision  
+11. (optional) retrieve and validate lifecycle (CLE) documents  
 
 ---
 
@@ -524,6 +597,13 @@ They trust:
 * use trusted TSAs  
 * consider redundancy  
 * store evidence  
+
+---
+
+### Lifecycle (CLE)
+
+* maintain version history  
+* never overwrite previous lifecycle states  
 
 ---
 
@@ -593,4 +673,4 @@ with:
 
 ## 10. One-Line Takeaway
 
-A small team can produce fully verifiable SBOMs and attestations using disposable keys, DNS-published short-lived certificates, timestamps, and transparency evidence — without running a traditional PKI.
+A small team can produce fully verifiable SBOMs and attestations using disposable keys, DNS-published short-lived certificates, timestamps, transparency evidence, and lifecycle tracking — without running a traditional PKI.
