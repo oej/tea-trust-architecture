@@ -26,6 +26,8 @@ TEST_DIR := $(CURDIR)
 
 # Script under test (one level up)
 TEST_SCRIPT := $(abspath $(TEST_DIR)/../sign-objects.sh)
+export TEST_SIGN_SCRIPT := $(abspath $(TEST_DIR)/../sign-objects.sh)
+export TEST_CONSUMER_SCRIPT := $(abspath $(TEST_DIR)/../consumer-validation.sh)
 
 FIXTURE_DIR := $(TEST_DIR)/fixtures
 CERT_DIR := $(TEST_DIR)/certs
@@ -49,7 +51,14 @@ TESTS := \
 	$(TEST_DIR)/04-destroy-keys.sh \
 	$(TEST_DIR)/05-persistence-san.sh \
 	$(TEST_DIR)/06-invalid-json-jcs-fails.sh \
-	$(TEST_DIR)/07-evidence-manifest-check.sh
+	$(TEST_DIR)/07-evidence-manifest-check.sh \
+	$(TEST_DIR)/11-consumer-raw-success.sh \
+	$(TEST_DIR)/12-consumer-jcs-success.sh \
+	$(TEST_DIR)/13-consumer-tampered-artefact-fails.sh \
+	$(TEST_DIR)/14-consumer-metadata-mismatch-fails.sh \
+	$(TEST_DIR)/15-consumer-missing-timestamp-fails.sh \
+	$(TEST_DIR)/16-consumer-evidence-manifest-mismatch-fails.sh \
+	$(TEST_DIR)/17-consumer-verify-time-outside-cert-fails.sh
 
 .PHONY: all test clean prepare-fixtures prepare-certs check-script
 

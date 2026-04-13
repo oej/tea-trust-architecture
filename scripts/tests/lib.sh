@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # tests/lib.sh
 set -euo pipefail
+TEST_SIGN_SCRIPT="${TEST_SIGN_SCRIPT:-$(cd "$(dirname "$0")/.." && pwd)/sign-objects.sh}"
+TEST_CONSUMER_SCRIPT="${TEST_CONSUMER_SCRIPT:-$(cd "$(dirname "$0")/.." && pwd)/consumer-validation.sh}"
 
 fail() {
   echo "FAIL: $*" >&2
