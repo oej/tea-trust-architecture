@@ -64,6 +64,25 @@ This document contains:
 
 ---
 
+## 1.3 Trusted Delivery vs Trusted Content
+
+The TEA Trust Architecture provides **trusted delivery**, not **trusted content**.
+
+It enables verification that:
+
+- an artefact has not been modified  
+- an artefact was produced by a specific identity  
+- an artefact existed at a provable point in time  
+
+However, it does **not** guarantee that:
+
+- the contents of the artefact are correct  
+- SBOMs are complete  
+- vulnerability statements are accurate  
+- compliance claims are valid  
+
+---
+
 # 2. Background and Problem Statement {#background}
 
 ## 2.1 The Long-Term Validation Problem
@@ -211,9 +230,9 @@ This avoids:
 
 # 5. Trust Models {#trust-models}
 
-## 5.1 TEA-Native (TAPS)
+## 5.1 TEA-Native
 
-TAPS defines DNS-based trust anchor publication.
+Defines DNS-based trust anchor publication when DNS is used according to this trust model.
 
 ---
 
@@ -430,6 +449,21 @@ Each step addresses a different risk:
 
 ---
 
+## 10.1 Lifecycle (CLE) Validation
+
+Lifecycle (CLE) documents:
+
+- MUST be signed  
+- MUST be versioned  
+- MUST be validated using the same mechanisms as collections  
+
+Consumers MUST:
+
+- be able to retrieve previous CLE versions  
+- compare lifecycle history over time  
+
+---
+
 # 11. Publication Trust {#publication}
 
 ## 11.1 Core Principle
@@ -486,6 +520,16 @@ Logs should be:
 
 ---
 
+## 11.5 Lifecycle (CLE) Publication
+
+Lifecycle (CLE) updates:
+
+- MUST follow the same commit and authorization model as collections  
+- MUST be versioned  
+- MUST be auditable  
+
+---
+
 # 12. Validation Profiles {#validation-profiles}
 
 Profiles allow different assurance levels:
@@ -521,6 +565,7 @@ TEA supports:
 - lifecycle validation  
 - SBOM traceability  
 - long-term auditability  
+- structured lifecycle communication through CLE  
 
 ---
 
