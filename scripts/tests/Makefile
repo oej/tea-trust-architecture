@@ -29,6 +29,10 @@ TEST_SCRIPT := $(abspath $(TEST_DIR)/../sign-objects.sh)
 export TEST_SIGN_SCRIPT := $(abspath $(TEST_DIR)/../sign-objects.sh)
 export TEST_CONSUMER_SCRIPT := $(abspath $(TEST_DIR)/../consumer-validation.sh)
 
+TEST_DIR := $(CURDIR)
+TEST_SCRIPT := $(abspath $(TEST_DIR)/../sign-objects.sh)
+TEST_CONSUMER_SCRIPT := $(abspath $(TEST_DIR)/../consumer-validation.sh)
+
 FIXTURE_DIR := $(TEST_DIR)/fixtures
 CERT_DIR := $(TEST_DIR)/certs
 WORK_DIR := $(TEST_DIR)/.work

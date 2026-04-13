@@ -5,7 +5,7 @@ set -euo pipefail
 
 WORKDIR="$(new_workdir 05-persistence-san)"
 OUTDIR="$WORKDIR/out"
-INPUT="fixtures/sample.bin"
+INPUT="$FIXTURE_ROOT/sample.bin"
 
 bash "$TEST_SCRIPT" \
   --mode raw \

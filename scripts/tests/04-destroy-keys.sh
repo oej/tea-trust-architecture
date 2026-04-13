@@ -5,7 +5,7 @@ set -euo pipefail
 
 WORKDIR="$(new_workdir 04-destroy-keys)"
 OUTDIR="$WORKDIR/out"
-INPUT="fixtures/sample.bin"
+INPUT="$FIXTURE_ROOT/sample.bin"
 
 bash "$TEST_SCRIPT" \
   --mode raw \

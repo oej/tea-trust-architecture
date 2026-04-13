@@ -5,7 +5,7 @@ set -euo pipefail
 
 WORKDIR="$(new_workdir 02-jcs)"
 OUTDIR="$WORKDIR/out"
-INPUT="fixtures/sample.json"
+INPUT="$FIXTURE_ROOT/sample.json"
 
 bash "$TEST_SCRIPT" \
   --mode jcs \

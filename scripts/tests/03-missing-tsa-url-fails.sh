@@ -5,7 +5,7 @@ set -euo pipefail
 
 WORKDIR="$(new_workdir 03-missing-tsa)"
 OUTDIR="$WORKDIR/out"
-INPUT="fixtures/sample.bin"
+INPUT="$FIXTURE_ROOT/sample.bin"
 
 must_fail env TSA_URL= bash "$TEST_SCRIPT" \
   --mode raw \

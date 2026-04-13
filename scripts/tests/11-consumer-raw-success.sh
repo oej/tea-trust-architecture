@@ -2,10 +2,11 @@
 # scripts/tests/11-consumer-raw-success.sh
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
-
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$REPO_ROOT"
 WORKDIR="$(new_workdir 11-consumer-raw)"
 OUTDIR="$WORKDIR/out"
-INPUT="fixtures/sample.bin"
+INPUT="$FIXTURE_ROOT/sample.bin"
 
 bash "$TEST_SIGN_SCRIPT" \
   --mode raw \

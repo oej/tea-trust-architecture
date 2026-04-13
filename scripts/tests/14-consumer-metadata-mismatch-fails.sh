@@ -5,7 +5,7 @@ set -euo pipefail
 
 WORKDIR="$(new_workdir 14-consumer-metadata-mismatch)"
 OUTDIR="$WORKDIR/out"
-INPUT="fixtures/sample.bin"
+INPUT="$FIXTURE_ROOT/sample.bin"
 
 bash "$TEST_SIGN_SCRIPT" \
   --mode raw \

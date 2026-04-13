@@ -5,7 +5,7 @@ set -euo pipefail
 
 WORKDIR="$(new_workdir 06-invalid-json)"
 OUTDIR="$WORKDIR/out"
-INPUT="fixtures/invalid.json"
+INPUT="$FIXTURE_ROOT/invalid.json"
 
 must_fail bash "$TEST_SCRIPT" \
   --mode jcs \

@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
-# tests/lib.sh
 set -euo pipefail
-TEST_SIGN_SCRIPT="${TEST_SIGN_SCRIPT:-$(cd "$(dirname "$0")/.." && pwd)/sign-objects.sh}"
-TEST_CONSUMER_SCRIPT="${TEST_CONSUMER_SCRIPT:-$(cd "$(dirname "$0")/.." && pwd)/consumer-validation.sh}"
+
+TEST_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TEST_ROOT="$TEST_LIB_DIR"
+WORK_ROOT="${WORK_ROOT:-$TEST_ROOT/.work}"
+FIXTURE_ROOT="${FIXTURE_ROOT:-$TEST_ROOT/fixtures}"
+
+TEST_SIGN_SCRIPT="${TEST_SIGN_SCRIPT:-$(cd "$TEST_ROOT/.." && pwd)/sign-objects.sh}"
+TEST_CONSUMER_SCRIPT="${TEST_CONSUMER_SCRIPT:-$(cd "$TEST_ROOT/.." && pwd)/consumer-validation.sh}"
 
 fail() {
   echo "FAIL: $*" >&2
@@ -28,13 +33,10 @@ must_fail() {
     fail "command unexpectedly succeeded: $*"
   fi
 }
-make_tmpdir() {
-  new_workdir tmp
-}
 
 new_workdir() {
   local name="$1"
-  local dir="tests/.work/${name}"
+  local dir="$WORK_ROOT/$name"
   rm -rf "$dir"
   mkdir -p "$dir"
   printf '%s\n' "$dir"

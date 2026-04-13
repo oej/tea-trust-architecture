@@ -7,7 +7,7 @@ WORKDIR="$(new_workdir 13-consumer-tampered)"
 OUTDIR="$WORKDIR/out"
 INPUT="$WORKDIR/sample.bin"
 
-cp "fixtures/sample.bin" "$INPUT"
+cp "$FIXTURE_ROOT/sample.bin" "$INPUT"
 
 bash "$TEST_SIGN_SCRIPT" \
   --mode raw \

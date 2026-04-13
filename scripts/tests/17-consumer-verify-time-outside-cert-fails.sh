@@ -5,7 +5,7 @@ set -euo pipefail
 
 WORKDIR="$(new_workdir 17-consumer-verify-time)"
 OUTDIR="$WORKDIR/out"
-INPUT="fixtures/sample.bin"
+INPUT="$FIXTURE_ROOT/sample.bin"
 
 bash "$TEST_SIGN_SCRIPT" \
   --mode raw \
