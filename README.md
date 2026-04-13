@@ -43,10 +43,10 @@ This supports regulatory and operational requirements such as:
 The TEA specification is composed of three main parts:
 
 ```text
-tea-core/     → Core specification (identifiers, discovery, concepts)
-OpenAPI       → Normative API and data model
-spec/         → Trust architecture (optional overlay)
-profiles/     → Trust profiles and cryptographic constraints
+tea-core/          → Core specification (identifiers, discovery, concepts)
+OpenAPI            → Normative API and data model
+tea-trust-arch/    → Trust architecture (optional overlay)
+profiles/          → Trust profiles and cryptographic constraints
 ```
 
 ---
@@ -119,7 +119,7 @@ Both are required for a complete implementation.
 
 ---
 
-## 3. TEA Trust Architecture (`spec/`, `profiles/`)
+## 3. TEA Trust Architecture (`tea-trust-arch/`, `profiles/`)
 
 The TEA Trust Architecture is an **optional overlay** that adds:
 
@@ -133,7 +133,7 @@ The TEA Trust Architecture is an **optional overlay** that adds:
 This is defined in:
 
 ```text
-spec/
+tea-trust-arch/
 profiles/
 ```
 
@@ -288,7 +288,7 @@ TEA provides a complete model for **automated software transparency in the softw
 TEI + Discovery        → locating services  
 OpenAPI               → interacting with services and data structures  
 tea-core/             → understanding the model and architecture  
-Trust Architecture    → securing and validating the data (optional)  
+tea-trust-arch/       → securing and validating the data (optional)  
 ```
 
 This layered approach enables:
