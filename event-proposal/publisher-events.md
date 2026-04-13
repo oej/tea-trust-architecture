@@ -2,6 +2,12 @@
 
 ---
 
+## Status
+
+Informative
+
+---
+
 ## 1. Scope
 
 This specification defines a **generic TEA publisher event delivery model** for asynchronous notifications about publisher-side workflow activity.
@@ -39,6 +45,24 @@ Each event MUST map to a corresponding audit event.
 
 ---
 
+### 2.5 Authentication vs Authorization
+
+Event delivery security provides:
+
+- **authentication** → verifying the sender identity (via signature)  
+- **integrity** → ensuring payload has not been modified  
+
+It does **not** provide authorization.
+
+Authorization decisions MUST be enforced:
+
+- in the publisher API  
+- in workflow systems consuming events  
+
+Events MAY contain authorization outcomes but MUST NOT be treated as authorization proof.
+
+---
+
 ## 3. Three-Layer Security Model
 
 ### 3.1 Layer 1 — Transport Security
@@ -61,6 +85,8 @@ This ensures:
 - sender authenticity  
 - payload integrity  
 - non-repudiation  
+
+Signing identity MUST be validated independently of the transport layer.
 
 ---
 
@@ -163,10 +189,14 @@ Examples:
 
 ---
 
-### 6.5 Lifecycle Management
+### 6.5 Lifecycle Management (CLE)
 - product.archived  
 - release.archived  
 - cle.updated  
+- cle.versionCreated  
+- cle.superseded  
+
+CLE-related events MUST reflect versioned lifecycle changes and support auditability of historical state transitions.
 
 ---
 
@@ -392,7 +422,7 @@ POST /event-subscriptions
 
 ## 16. Normative Statement
 
-> TEA publisher implementations SHOULD support a standardized event delivery mechanism. Events SHALL be transport-independent. Implementations MUST provide message-level integrity protection and sender authentication independently of TLS. Implementations MAY support payload encryption using a receiver-provided public key. HTTP webhooks are one transport binding; the model SHOULD support message buses and similar transports.
+> TEA publisher implementations SHOULD support a standardized event delivery mechanism. Events SHALL be transport-independent. Implementations MUST provide message-level integrity protection and sender authentication independently of TLS. Implementations MUST NOT rely on event delivery as authorization proof. Implementations MAY support payload encryption using a receiver-provided public key. HTTP webhooks are one transport binding; the model SHOULD support message buses and similar transports.
 
 ---
 
@@ -401,6 +431,9 @@ POST /event-subscriptions
 This model ensures:
 
 - secure delivery independent of TLS  
+- clear separation of authentication and authorization  
 - interoperability across implementations  
 - extensibility for future transports  
 - alignment with TEA trust architecture  
+
+---
