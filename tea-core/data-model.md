@@ -193,6 +193,7 @@ Important:
 
 - a collection describes **composition**, not storage  
 - it does not contain the artifact data itself  
+- it does NOT carry lifecycle state (this is handled by CLE)  
 
 ---
 
@@ -260,6 +261,26 @@ Important properties:
 - CLE applies to **products or components**, not releases  
 - CLE spans **multiple versions**  
 - CLE is **independent of collections and artifacts**  
+
+---
+
+### CLE as versioned documents
+
+CLE information is expressed as **versioned lifecycle documents**.
+
+- each update to lifecycle information results in a **new CLE version**  
+- previous versions MUST remain accessible  
+- lifecycle changes (e.g., updated end-of-life date) MUST NOT overwrite history  
+
+---
+
+### CLE and releases
+
+CLE documents:
+
+- describe lifecycle **across releases**, not within a single release  
+- may reference multiple releases implicitly or explicitly  
+- provide temporal context that collections do not express  
 
 ---
 
@@ -333,6 +354,20 @@ Artifacts are:
 
 ---
 
+### 7.4 Lifecycle (CLE)
+
+Lifecycle documents are:
+
+- versioned  
+- append-only (new versions replace old, but do not overwrite)  
+
+Systems MUST:
+
+- retain historical versions  
+- allow comparison between versions  
+
+---
+
 ## 8. Data Flow in Practice
 
 A typical flow:
@@ -342,11 +377,13 @@ A typical flow:
 3. Upload artifacts  
 4. Create a collection referencing artifacts  
 5. Publish the collection  
+6. Publish or update lifecycle (CLE) documents  
 
 After publication:
 
 - the collection becomes the authoritative release definition  
 - artifacts become part of a release context  
+- lifecycle evolves independently via CLE  
 
 ---
 
@@ -361,6 +398,10 @@ Once published:
 - artifacts  
 
 MUST NOT change.
+
+Lifecycle (CLE):
+
+- MUST NOT overwrite previous versions  
 
 ---
 
