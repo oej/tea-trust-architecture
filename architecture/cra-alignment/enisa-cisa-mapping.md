@@ -70,6 +70,8 @@ TEA enables:
 - reconstruction of historical releases
 - validation of affected components
 - linkage between SBOM and evidence
+- lifecycle events via CLE (Common Lifecycle Enumeration)
+- versioned lifecycle history for audit and compliance
 
 ## 4. Mapping to CISA Secure by Design
 
@@ -117,6 +119,11 @@ TEA directly supports CRA requirements:
 ### 5.4 Supply chain security
 - evidence-based trust replaces implicit trust
 
+### 5.5 Lifecycle communication (CLE)
+
+- TEA provides structured lifecycle communication through CLE documents
+- Supports regulatory requirements for end-of-support and vulnerability handling timelines
+
 ## 6. Key contribution of TEA
 
 ENISA and CISA describe *what* should be achieved.
@@ -127,6 +134,10 @@ TEA defines *how* to achieve it technically:
 - Commit-based release process
 - Time-bound validation
 - Transparency-backed verification
+
+TEA ensures trusted delivery and verifiable provenance of artifacts.
+
+It does not guarantee that the content of artifacts is free from vulnerabilities or defects.
 
 ## 7. Summary
 
