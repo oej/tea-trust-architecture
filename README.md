@@ -19,6 +19,10 @@ TEA is designed to support modern software supply chains, including:
 - integrators  
 - operators and consumers  
 
+> __Note:__ This directory is work-in-progress and contains specifications, data models
+and test scripts created by OEJ with support from ChatGPT during many hours of
+discussion. The official repository contains the current working documents.
+
 ---
 
 ## Purpose
