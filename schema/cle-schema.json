@@ -1,0 +1,314 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/tea-cle-document.schema.json",
+  "title": "TEA CLE Document",
+  "description": "Versioned lifecycle document for a TEA subject. This schema is intended for products, product releases, components, and component releases. It supports current TEA Core lifecycle handling and future trust architecture signing. In base TEA, evidenceBundle may be absent. In TEA Trust Architecture, evidenceBundle is expected and may be required by profile rules.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "cleId",
+    "subjectType",
+    "subjectId",
+    "version",
+    "createdAt",
+    "lifecycle"
+  ],
+  "properties": {
+    "cleId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Stable identifier for the CLE document series. All versions of the same lifecycle record share the same cleId."
+    },
+    "subjectType": {
+      "type": "string",
+      "enum": [
+        "product",
+        "productRelease",
+        "component",
+        "componentRelease"
+      ],
+      "description": "The TEA object type to which this lifecycle document applies. This matches the current TEA OpenAPI model, where CLE is scoped to products, product releases, components, and component releases."
+    },
+    "subjectId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID of the TEA subject referenced by subjectType."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Monotonically increasing version number of this CLE document."
+    },
+    "previousVersion": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1,
+      "description": "Previous CLE version number. Null for the first published version."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this CLE document version was created."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Human-readable reason for publishing this new CLE version, for example: end-of-sale date announced, support period extended, or correction of previous lifecycle information."
+    },
+    "lifecycle": {
+      "$ref": "#/$defs/cle",
+      "description": "The lifecycle payload based on the CLE model used by the TEA OpenAPI."
+    },
+    "evidenceBundle": {
+      "type": "object",
+      "description": "Optional embedded evidence bundle for this CLE document. External evidence bundles are not used for CLE. In base TEA this field may be absent. In TEA Trust Architecture, this field is expected and may be required by profile rules.",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "date-time": {
+      "type": "string",
+      "description": "Timestamp in TEA date-time format.",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "example": "2024-03-20T15:30:00Z"
+    },
+    "identifier-type": {
+      "type": "string",
+      "description": "Enumeration of identifier types currently defined by the TEA OpenAPI.",
+      "enum": [
+        "CPE",
+        "TEI",
+        "PURL",
+        "COMPLIANCE_DOCUMENT"
+      ]
+    },
+    "identifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Identifier object reused in CLE events when external identifiers are needed.",
+      "required": [
+        "idType",
+        "idValue"
+      ],
+      "properties": {
+        "idType": {
+          "$ref": "#/$defs/identifier-type"
+        },
+        "idValue": {
+          "type": "string"
+        }
+      }
+    },
+    "cle-event-type": {
+      "type": "string",
+      "description": "Lifecycle event type from the current TEA OpenAPI CLE model.",
+      "enum": [
+        "released",
+        "endOfDevelopment",
+        "endOfSupport",
+        "endOfLife",
+        "endOfDistribution",
+        "endOfMarketing",
+        "supersededBy",
+        "componentRenamed",
+        "withdrawn"
+      ]
+    },
+    "cle-version-specifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Version selector used by CLE events. A selector may identify a single version or a range expression.",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "Single version identifier."
+        },
+        "range": {
+          "type": "string",
+          "description": "Version range expression, for example a vers-formatted range."
+        }
+      },
+      "minProperties": 1
+    },
+    "cle-reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Reference associated with a CLE event.",
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Reference URL."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description of the reference."
+        }
+      }
+    },
+    "cle-support-definition": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Reusable support policy definition referenced by supportId.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identifier of the support definition."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the support policy."
+        }
+      }
+    },
+    "cle-definitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional reusable definitions used by CLE events.",
+      "properties": {
+        "support": {
+          "type": "array",
+          "description": "Reusable support policy definitions.",
+          "items": {
+            "$ref": "#/$defs/cle-support-definition"
+          }
+        }
+      }
+    },
+    "cle-event": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Single lifecycle event. The current TEA OpenAPI requires id, type, effective, and published.",
+      "required": [
+        "id",
+        "type",
+        "effective",
+        "published"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Unique event identifier within the CLE document."
+        },
+        "type": {
+          "$ref": "#/$defs/cle-event-type"
+        },
+        "effective": {
+          "$ref": "#/$defs/date-time",
+          "description": "Time when this lifecycle event takes effect. This may be in the future."
+        },
+        "published": {
+          "$ref": "#/$defs/date-time",
+          "description": "Time when this lifecycle event was first published."
+        },
+        "version": {
+          "type": "string",
+          "description": "Optional single version to which this event applies."
+        },
+        "versions": {
+          "type": "array",
+          "description": "Optional set of version selectors to which this event applies.",
+          "items": {
+            "$ref": "#/$defs/cle-version-specifier"
+          }
+        },
+        "supportId": {
+          "type": "string",
+          "description": "Optional reference into definitions.support."
+        },
+        "license": {
+          "type": "string",
+          "description": "Optional license information relevant to the lifecycle event."
+        },
+        "supersededByVersion": {
+          "type": "string",
+          "description": "Optional version that supersedes the affected subject."
+        },
+        "identifiers": {
+          "type": "array",
+          "description": "Optional identifiers associated with this event.",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "eventId": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Optional reference to another event, for example when withdrawing a previously published event."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Optional event-specific reason."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional free-text description."
+        },
+        "references": {
+          "type": "array",
+          "description": "Optional supporting references.",
+          "items": {
+            "$ref": "#/$defs/cle-reference"
+          }
+        }
+      }
+    },
+    "cle": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "CLE payload returned today by the current TEA OpenAPI CLE endpoints. It contains ordered events and optional reusable definitions.",
+      "required": [
+        "events"
+      ],
+      "properties": {
+        "events": {
+          "type": "array",
+          "description": "Ordered array of lifecycle events. Current TEA OpenAPI describes these as ordered by descending event ID, newest first.",
+          "items": {
+            "$ref": "#/$defs/cle-event"
+          }
+        },
+        "definitions": {
+          "$ref": "#/$defs/cle-definitions"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "cleId": "94ec8c3d-0dc1-4bca-8baf-3ec4d4dd5fd3",
+      "subjectType": "productRelease",
+      "subjectId": "f01d5a0a-54b2-4c91-b4a7-36b68d61335f",
+      "version": 2,
+      "previousVersion": 1,
+      "createdAt": "2026-04-12T18:00:00Z",
+      "reason": "Added one year before end-of-sale announcement",
+      "lifecycle": {
+        "events": [
+          {
+            "id": 3,
+            "type": "endOfMarketing",
+            "effective": "2027-06-30T00:00:00Z",
+            "published": "2026-04-12T18:00:00Z",
+            "description": "End-of-sale announced one year in advance"
+          },
+          {
+            "id": 2,
+            "type": "endOfSupport",
+            "effective": "2029-06-30T00:00:00Z",
+            "published": "2026-04-12T18:00:00Z"
+          },
+          {
+            "id": 1,
+            "type": "released",
+            "effective": "2025-01-15T00:00:00Z",
+            "published": "2025-01-15T00:00:00Z"
+          }
+        ]
+      }
+    }
+  ]
+}

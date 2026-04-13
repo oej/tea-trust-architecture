@@ -1,0 +1,446 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/tea-collection-wrapper.schema.json",
+  "title": "TEA Collection Wrapper",
+  "description": "Unified wrapper for TEA collections. This schema is used in both base TEA and TEA Trust Architecture. In base TEA, evidence-related fields may be absent. In TEA Trust Architecture, evidence for the collection and for artifacts is required by profile and validation rules, even when the schema itself leaves those fields optional. This schema therefore captures the common shape, while TEA conformance rules determine when evidence fields must be populated.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "collection"
+  ],
+  "properties": {
+    "collection": {
+      "$ref": "#/$defs/collection",
+      "description": "The core TEA collection object. This is always required."
+    },
+    "evidenceBundle": {
+      "$ref": "#/$defs/evidenceBundlePlaceholder",
+      "description": "Optional embedded evidence bundle for the collection itself. Use this when the collection's trust evidence is carried inline with the collection wrapper. In base TEA this field is typically absent. In TEA Trust Architecture, this field or evidenceBundleRef is expected for a trusted collection."
+    },
+    "evidenceBundleRef": {
+      "$ref": "#/$defs/externalEvidenceRef",
+      "description": "Optional external reference to the collection's evidence bundle. Use this when evidence is stored separately from the wrapper. The referenced evidence bundle is protected by a SHA-256 digest over its canonical JSON representation. In base TEA this field is typically absent. In TEA Trust Architecture, this field or evidenceBundle is expected for a trusted collection."
+    }
+  },
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID value."
+    },
+
+    "date-time": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "description": "Timestamp in TEA date-time format.",
+      "examples": [
+        "2024-03-20T15:30:00Z"
+      ]
+    },
+
+    "digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "const": "sha-256",
+          "description": "Digest algorithm. For evidence references and TEA trust bindings, SHA-256 is used."
+        },
+        "value": {
+          "type": "string",
+          "description": "Digest value encoded using a deployment-defined representation such as base64url or hexadecimal."
+        }
+      },
+      "description": "Digest object used for content-addressable references and trust bindings."
+    },
+
+    "externalEvidenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "uri",
+        "digest"
+      ],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "format": "uri",
+          "description": "URI where the external evidence bundle can be retrieved."
+        },
+        "digest": {
+          "$ref": "#/$defs/digest",
+          "description": "SHA-256 digest of the canonical JSON representation of the external evidence bundle."
+        }
+      },
+      "description": "Reference to an external evidence bundle. External evidence bundles are used when evidence is stored separately from the collection wrapper or artifact entry. The digest protects against substitution or silent modification. In TEA Trust Architecture, external and embedded evidence are functionally equivalent if validation succeeds."
+    },
+
+    "evidenceBundlePlaceholder": {
+      "type": "object",
+      "description": "Placeholder for an embedded TEA Evidence Bundle. Replace this reference with the full TEA evidence bundle schema in an integrated schema set. This placeholder is used here to show where collection-level or artifact-level evidence is carried when embedded.",
+      "additionalProperties": true
+    },
+
+    "identifier-type": {
+      "type": "string",
+      "description": "Enumeration of identifier types.",
+      "enum": [
+        "CPE",
+        "TEI",
+        "PURL",
+        "COMPLIANCE_DOCUMENT"
+      ]
+    },
+
+    "identifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "idType",
+        "idValue"
+      ],
+      "properties": {
+        "idType": {
+          "$ref": "#/$defs/identifier-type",
+          "description": "Type of identifier."
+        },
+        "idValue": {
+          "type": "string",
+          "description": "Identifier value."
+        }
+      },
+      "description": "Generic identifier object used in TEA."
+    },
+
+    "checksum-type": {
+      "type": "string",
+      "description": "Checksum algorithm.",
+      "enum": [
+        "MD5",
+        "SHA-1",
+        "SHA-256",
+        "SHA-384",
+        "SHA-512",
+        "SHA3-256",
+        "SHA3-384",
+        "SHA3-512",
+        "BLAKE2b-256",
+        "BLAKE2b-384",
+        "BLAKE2b-512",
+        "BLAKE3"
+      ]
+    },
+
+    "checksum": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algType",
+        "algValue"
+      ],
+      "properties": {
+        "algType": {
+          "$ref": "#/$defs/checksum-type"
+        },
+        "algValue": {
+          "type": "string",
+          "description": "Checksum value."
+        }
+      },
+      "description": "Checksum object for a particular artifact representation."
+    },
+
+    "artifact-format": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mediaType",
+        "url"
+      ],
+      "properties": {
+        "mediaType": {
+          "type": "string",
+          "description": "Media type of this artifact representation."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description of this representation."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Download URL for this artifact representation."
+        },
+        "signatureUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Optional URL for a detached signature, when such a representation is exposed separately."
+        },
+        "checksums": {
+          "type": "array",
+          "description": "Checksums for this artifact representation.",
+          "items": {
+            "$ref": "#/$defs/checksum"
+          }
+        }
+      },
+      "description": "One downloadable representation of an artifact."
+    },
+
+    "artifact-type": {
+      "type": "string",
+      "description": "Artifact type from the TEA API model.",
+      "enum": [
+        "ATTESTATION",
+        "BOM",
+        "BUILD_META",
+        "CERTIFICATION",
+        "FORMULATION",
+        "LICENSE",
+        "RELEASE_NOTES",
+        "SECURITY_TXT",
+        "THREAT_MODEL",
+        "VULNERABILITIES",
+        "OTHER"
+      ]
+    },
+
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "uuid",
+        "type",
+        "formats"
+      ],
+      "properties": {
+        "uuid": {
+          "$ref": "#/$defs/uuid",
+          "description": "UUID of the artifact."
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "Artifact revision number."
+        },
+        "name": {
+          "type": "string",
+          "description": "Artifact name."
+        },
+        "type": {
+          "$ref": "#/$defs/artifact-type"
+        },
+        "createdDate": {
+          "$ref": "#/$defs/date-time",
+          "description": "Creation date of this artifact revision."
+        },
+        "distributionIds": {
+          "type": "array",
+          "description": "Optional list of distribution UUIDs to which this artifact applies.",
+          "items": {
+            "$ref": "#/$defs/uuid"
+          }
+        },
+        "formats": {
+          "type": "array",
+          "description": "Representations of the same artifact content in different formats.",
+          "items": {
+            "$ref": "#/$defs/artifact-format"
+          }
+        },
+        "evidenceBundle": {
+          "$ref": "#/$defs/evidenceBundlePlaceholder",
+          "description": "Optional embedded evidence bundle for this artifact. In base TEA this is usually absent. In TEA Trust Architecture, artifact-level evidence is expected and may be embedded here."
+        },
+        "evidenceBundleRef": {
+          "$ref": "#/$defs/externalEvidenceRef",
+          "description": "Optional external reference to this artifact's evidence bundle. Use this when evidence is stored separately. In TEA Trust Architecture, artifact-level evidence may be carried this way instead of embedding it."
+        }
+      },
+      "description": "TEA artifact object. Evidence fields are optional in the common schema because the same schema is used for both base TEA and TEA Trust Architecture. In base TEA, these fields may be absent. In TEA Trust Architecture, evidence for artifacts is required by profile and validation rules."
+    },
+
+    "collection-update-reason-type": {
+      "type": "string",
+      "description": "Reason type for a collection update.",
+      "enum": [
+        "INITIAL_RELEASE",
+        "VEX_UPDATED",
+        "ARTIFACT_UPDATED",
+        "ARTIFACT_ADDED",
+        "ARTIFACT_REMOVED"
+      ]
+    },
+
+    "collection-update-reason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/collection-update-reason-type"
+        },
+        "comment": {
+          "type": "string",
+          "description": "Optional free-text explanation."
+        }
+      },
+      "description": "Reason for the current collection version."
+    },
+
+    "collection-belongs-to-type": {
+      "type": "string",
+      "description": "Relationship of the collection to a release type.",
+      "enum": [
+        "COMPONENT_RELEASE",
+        "PRODUCT_RELEASE"
+      ]
+    },
+
+    "collection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "uuid",
+        "version",
+        "date",
+        "belongsTo",
+        "updateReason",
+        "artifacts"
+      ],
+      "properties": {
+        "uuid": {
+          "$ref": "#/$defs/uuid",
+          "description": "UUID of the TEA Collection."
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Version of this TEA Collection."
+        },
+        "date": {
+          "$ref": "#/$defs/date-time",
+          "description": "Timestamp of this TEA Collection version."
+        },
+        "belongsTo": {
+          "$ref": "#/$defs/collection-belongs-to-type",
+          "description": "Indicates whether the collection belongs to a component release or a product release."
+        },
+        "updateReason": {
+          "$ref": "#/$defs/collection-update-reason",
+          "description": "Reason for this collection version."
+        },
+        "artifacts": {
+          "type": "array",
+          "description": "Artifacts included in the collection.",
+          "items": {
+            "$ref": "#/$defs/artifact"
+          }
+        }
+      },
+      "description": "Core TEA collection object from the TEA API model. This object does not itself define trust semantics. Trust is added by the wrapper through evidenceBundle or evidenceBundleRef, and through artifact-level evidence when TEA Trust Architecture is used."
+    }
+  },
+
+  "examples": [
+    {
+      "collection": {
+        "uuid": "4c72fe22-9d83-4c2f-8eba-d6db484f32c8",
+        "version": 10,
+        "date": "2024-12-13T00:00:00Z",
+        "belongsTo": "PRODUCT_RELEASE",
+        "updateReason": {
+          "type": "ARTIFACT_UPDATED",
+          "comment": "VDR file updated"
+        },
+        "artifacts": [
+          {
+            "uuid": "1cb47b95-8bf8-3bad-a5a4-0d54d86e10ce",
+            "name": "Build SBOM",
+            "type": "BOM",
+            "formats": [
+              {
+                "mediaType": "application/vnd.cyclonedx+xml",
+                "description": "CycloneDX SBOM (XML)",
+                "url": "https://example.org/artifacts/sbom.xml",
+                "signatureUrl": "https://example.org/artifacts/sbom.xml.asc",
+                "checksums": [
+                  {
+                    "algType": "SHA-256",
+                    "algValue": "75b81020b3917cb682b1a7605ade431e062f7a4c01a412f0b87543b6e995ad2a"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "uuid": "dfa35519-9734-4259-bba1-3e825cf4be06",
+            "version": 7,
+            "name": "Vulnerability Disclosure Report",
+            "type": "VULNERABILITIES",
+            "formats": [
+              {
+                "mediaType": "application/vnd.cyclonedx+xml",
+                "description": "CycloneDX VDR (XML)",
+                "url": "https://example.org/artifacts/vdr.xml",
+                "checksums": [
+                  {
+                    "algType": "SHA-256",
+                    "algValue": "75b81020b3917cb682b1a7605ade431e062f7a4c01a412f0b87543b6e995ad2a"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "collection": {
+        "uuid": "4c72fe22-9d83-4c2f-8eba-d6db484f32c8",
+        "version": 10,
+        "date": "2024-12-13T00:00:00Z",
+        "belongsTo": "PRODUCT_RELEASE",
+        "updateReason": {
+          "type": "ARTIFACT_UPDATED",
+          "comment": "VDR file updated"
+        },
+        "artifacts": [
+          {
+            "uuid": "1cb47b95-8bf8-3bad-a5a4-0d54d86e10ce",
+            "name": "Build SBOM",
+            "type": "BOM",
+            "formats": [
+              {
+                "mediaType": "application/vnd.cyclonedx+xml",
+                "url": "https://example.org/artifacts/sbom.xml"
+              }
+            ],
+            "evidenceBundleRef": {
+              "uri": "https://example.org/evidence/sbom-evidence.json",
+              "digest": {
+                "algorithm": "sha-256",
+                "value": "artifactevidence123..."
+              }
+            }
+          }
+        ]
+      },
+      "evidenceBundleRef": {
+        "uri": "https://example.org/evidence/collection-evidence.json",
+        "digest": {
+          "algorithm": "sha-256",
+          "value": "collectionevidence456..."
+        }
+      }
+    }
+  ]
+}
