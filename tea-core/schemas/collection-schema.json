@@ -1,0 +1,321 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/tea-collection.schema.json",
+  "title": "TEA Collection",
+  "description": "Schema for a TEA Collection object, including embedded TEA Artifact objects, based on the current TEA OpenAPI specification.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uuid",
+    "version",
+    "date",
+    "belongsTo",
+    "updateReason",
+    "artifacts"
+  ],
+  "properties": {
+    "uuid": {
+      "$ref": "#/$defs/uuid",
+      "description": "UUID of the TEA Collection object."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Version of the TEA Collection for the release."
+    },
+    "date": {
+      "$ref": "#/$defs/date-time",
+      "description": "Date when this TEA Collection version was created or published."
+    },
+    "belongsTo": {
+      "$ref": "#/$defs/collection-belongs-to-type",
+      "description": "Indicates whether this collection belongs to a Component Release or a Product Release."
+    },
+    "updateReason": {
+      "$ref": "#/$defs/collection-update-reason",
+      "description": "Reason for the update or release of the TEA Collection object."
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "List of TEA Artifact objects.",
+      "items": {
+        "$ref": "#/$defs/artifact"
+      }
+    }
+  },
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID value."
+    },
+    "date-time": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "description": "Timestamp in TEA date-time format.",
+      "examples": [
+        "2024-03-20T15:30:00Z"
+      ]
+    },
+    "identifier-type": {
+      "type": "string",
+      "description": "Enumeration of identifier types.",
+      "enum": [
+        "CPE",
+        "TEI",
+        "PURL",
+        "COMPLIANCE_DOCUMENT"
+      ]
+    },
+    "identifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "An identifier with a specified type.",
+      "required": [
+        "idType",
+        "idValue"
+      ],
+      "properties": {
+        "idType": {
+          "$ref": "#/$defs/identifier-type",
+          "description": "Type of identifier."
+        },
+        "idValue": {
+          "type": "string",
+          "description": "Identifier value."
+        }
+      }
+    },
+    "checksum-type": {
+      "type": "string",
+      "description": "Checksum algorithm.",
+      "enum": [
+        "MD5",
+        "SHA-1",
+        "SHA-256",
+        "SHA-384",
+        "SHA-512",
+        "SHA3-256",
+        "SHA3-384",
+        "SHA3-512",
+        "BLAKE2b-256",
+        "BLAKE2b-384",
+        "BLAKE2b-512",
+        "BLAKE3"
+      ]
+    },
+    "checksum": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Checksum for an artifact format.",
+      "required": [
+        "algType",
+        "algValue"
+      ],
+      "properties": {
+        "algType": {
+          "$ref": "#/$defs/checksum-type",
+          "description": "Checksum algorithm."
+        },
+        "algValue": {
+          "type": "string",
+          "description": "Checksum value."
+        }
+      }
+    },
+    "artifact-format": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A TEA Artifact in a specific format.",
+      "required": [
+        "mediaType",
+        "url"
+      ],
+      "properties": {
+        "mediaType": {
+          "type": "string",
+          "description": "The media type of the document."
+        },
+        "description": {
+          "type": "string",
+          "description": "Free-text description of this artifact format."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Direct download URL for the TEA Artifact format."
+        },
+        "signatureUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Direct download URL for an external signature of the TEA Artifact."
+        },
+        "checksums": {
+          "type": "array",
+          "description": "List of checksums for the TEA Artifact format.",
+          "items": {
+            "$ref": "#/$defs/checksum"
+          }
+        }
+      }
+    },
+    "artifact-type": {
+      "type": "string",
+      "description": "Type of TEA Artifact.",
+      "enum": [
+        "ATTESTATION",
+        "BOM",
+        "BUILD_META",
+        "CERTIFICATION",
+        "FORMULATION",
+        "LICENSE",
+        "RELEASE_NOTES",
+        "SECURITY_TXT",
+        "THREAT_MODEL",
+        "VULNERABILITIES",
+        "OTHER"
+      ]
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A TEA Artifact object.",
+      "required": [
+        "uuid",
+        "type",
+        "formats"
+      ],
+      "properties": {
+        "uuid": {
+          "$ref": "#/$defs/uuid",
+          "description": "UUID of the TEA Artifact object. Together with version uniquely identifies the TEA Artifact."
+        },
+        "version": {
+          "type": "integer",
+          "default": 1,
+          "minimum": 1,
+          "description": "Artifact revision number. Together with uuid uniquely identifies the TEA Artifact."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the TEA Artifact."
+        },
+        "type": {
+          "$ref": "#/$defs/artifact-type",
+          "description": "Type of TEA Artifact."
+        },
+        "createdDate": {
+          "$ref": "#/$defs/date-time",
+          "description": "The date when the TEA Artifact revision was created."
+        },
+        "distributionIds": {
+          "type": "array",
+          "description": "List of TEA Component Release distributions that this TEA Artifact applies to. If absent or empty, the TEA Artifact applies to all distributions.",
+          "items": {
+            "$ref": "#/$defs/uuid"
+          }
+        },
+        "formats": {
+          "type": "array",
+          "description": "List of objects with the same content, but in different formats. The order of the list has no significance.",
+          "items": {
+            "$ref": "#/$defs/artifact-format"
+          }
+        }
+      }
+    },
+    "collection-update-reason-type": {
+      "type": "string",
+      "description": "Type of TEA collection update.",
+      "enum": [
+        "INITIAL_RELEASE",
+        "VEX_UPDATED",
+        "ARTIFACT_UPDATED",
+        "ARTIFACT_ADDED",
+        "ARTIFACT_REMOVED"
+      ]
+    },
+    "collection-update-reason": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Reason for the update to the TEA Collection.",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/collection-update-reason-type",
+          "description": "Type of update reason."
+        },
+        "comment": {
+          "type": "string",
+          "description": "Free-text description."
+        }
+      }
+    },
+    "collection-belongs-to-type": {
+      "type": "string",
+      "description": "Indicates whether a collection belongs to a component release or a product release.",
+      "enum": [
+        "COMPONENT_RELEASE",
+        "PRODUCT_RELEASE"
+      ]
+    }
+  },
+  "examples": [
+    {
+      "uuid": "4c72fe22-9d83-4c2f-8eba-d6db484f32c8",
+      "version": 10,
+      "date": "2024-12-13T00:00:00Z",
+      "belongsTo": "PRODUCT_RELEASE",
+      "updateReason": {
+        "type": "ARTIFACT_UPDATED",
+        "comment": "VDR file updated"
+      },
+      "artifacts": [
+        {
+          "uuid": "1cb47b95-8bf8-3bad-a5a4-0d54d86e10ce",
+          "name": "Build SBOM",
+          "type": "BOM",
+          "formats": [
+            {
+              "mediaType": "application/vnd.cyclonedx+xml",
+              "description": "CycloneDX SBOM (XML)",
+              "url": "https://repo.maven.apache.org/maven2/org/apache/logging/log4j/log4j-core/2.24.3/log4j-core-2.24.3-cyclonedx.xml",
+              "signatureUrl": "https://repo.maven.apache.org/maven2/org/apache/logging/log4j/log4j-core/2.24.3/log4j-core-2.24.3-cyclonedx.xml.asc",
+              "checksums": [
+                {
+                  "algType": "MD5",
+                  "algValue": "2e1a525afc81b0a8ecff114b8b743de9"
+                },
+                {
+                  "algType": "SHA-1",
+                  "algValue": "5a7d4caef63c5c5ccdf07c39337323529eb5a770"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "uuid": "dfa35519-9734-4259-bba1-3e825cf4be06",
+          "version": 7,
+          "name": "Vulnerability Disclosure Report",
+          "type": "VULNERABILITIES",
+          "formats": [
+            {
+              "mediaType": "application/vnd.cyclonedx+xml",
+              "description": "CycloneDX VDR (XML)",
+              "url": "https://logging.apache.org/cyclonedx/vdr.xml",
+              "checksums": [
+                {
+                  "algType": "SHA-256",
+                  "algValue": "75b81020b3917cb682b1a7605ade431e062f7a4c01a412f0b87543b6e995ad2a"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
