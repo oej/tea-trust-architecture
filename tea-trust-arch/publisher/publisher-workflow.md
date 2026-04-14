@@ -1,357 +1,431 @@
-# 📘 TEA Publisher Workflow Specification
-**Version:** 1.0  
-**Status:** Draft (Normative, Implementation-Ready)
-
----
+# TEA Trust Architecture — Publisher Workflow
 
 ## Status
 
-This document defines the **TEA publisher workflow**, including:
-
-- how TEA artifacts are created and prepared
-- how TEA collections are assembled
-- how signatures and evidence bundles are generated
-- how releases are committed and published
-- logging and messaging requirements for the Publisher API
-
-This specification applies to:
-
-- **base TEA**
-- **TEA Trust Architecture (overlay)**
-
-The key words **MUST**, **SHOULD**, and **MAY** are to be interpreted as described in:
-
-- RFC 2119  
-- RFC 8174  
+- **Status**: Draft / Informational
+- **Normative reference**: Publisher OpenAPI specification (to be defined)
+- **Purpose**: Describe intended publisher workflows and guide implementation
+- **Audience**: Software publishers, CI/CD engineers, security engineers, compliance teams
 
 ---
 
 ## Table of Contents
 
-1. [Introduction](#1-introduction)  
-2. [Workflow Overview](#2-workflow-overview)  
-3. [Core Principles](#3-core-principles)  
-4. [Artifact Lifecycle](#4-artifact-lifecycle)  
-5. [Evidence Bundle Creation](#5-evidence-bundle-creation)  
-6. [Collection Assembly](#6-collection-assembly)  
-7. [Commit Phase](#7-commit-phase)  
-8. [Publication Phase](#8-publication-phase)  
-9. [Key Management Requirements](#9-key-management-requirements)  
-10. [CI/CD Integration](#10-cicd-integration)  
-11. [Messaging Model](#11-messaging-model)  
-12. [Logging Requirements](#12-logging-requirements)  
-13. [Validation Before Publication](#13-validation-before-publication)  
-14. [Error Conditions](#14-error-conditions)  
-15. [Security Considerations](#15-security-considerations)  
-16. [Normative References](#16-normative-references)  
-17. [Informative References](#17-informative-references)  
+1. [Overview](#overview)
+2. [Core Principles](#core-principles)
+3. [Key Concepts](#key-concepts)
+4. [Workflow Phases](#workflow-phases)
+5. [Artifact Lifecycle](#artifact-lifecycle)
+6. [Collection Lifecycle](#collection-lifecycle)
+7. [CLE Lifecycle](#cle-lifecycle)
+8. [Compliance Documents](#compliance-documents)
+9. [Evidence and Validation](#evidence-and-validation)
+10. [Commit and Publication](#commit-and-publication)
+11. [Real-World Scenarios](#real-world-scenarios)
+12. [Summary](#summary)
 
 ---
 
-## 1. Introduction
+## Overview
 
-The TEA Publisher Workflow defines how a release moves from:
+This document describes how a publisher is expected to:
 
-> **content → signed artifacts → evidence → collection → published release**
+- prepare release artefacts  
+- assemble collections  
+- manage lifecycle statements (CLE)  
+- associate compliance documentation  
+- perform signing and validation  
+- publish versioned data  
 
-The workflow is deliberately split into phases to support:
+It is intended to:
 
-- automation (CI/CD)
-- human approval (gated release)
-- strong auditability
-- deterministic outputs
+- guide implementation of publisher systems  
+- inform the design of the publisher OpenAPI  
+- provide a shared mental model across stakeholders  
 
-A key design goal is:
-
-> **Artifacts become immutable trust objects before publication.**
+The **publisher OpenAPI specification will define the normative behavior**.
 
 ---
 
-## 2. Workflow Overview
+## Core Principles
 
-### 2.1 High-level phases
+### Stable Release Identity
 
-1. Artifact creation  
-2. Evidence generation  
-3. Collection assembly  
-4. Commit (finalization)  
-5. Publication  
+A `productRelease` or `componentRelease` represents a **stable release identity**.
 
-### 2.2 Flow
+It typically corresponds to:
+
+- a version (e.g. `1.2.3`)
+- a release event
+- a defined set of deliverables
+
+This identity is expected to remain stable over time.
+
+---
+
+### Versioned Publication Streams
+
+Several objects evolve over time independently of the release identity:
+
+- collections  
+- artefacts  
+- CLE documents  
+- compliance-document references  
+
+New versions of these may be published without introducing a new software release.
+
+---
+
+### Immutability of Published Versions
+
+Once published:
+
+- a collection version is not modified  
+- an artifact version is not modified  
+- a CLE version is not modified  
+- evidence bundles remain unchanged  
+
+Updates are represented as **new versions**.
+
+---
+
+### Separation of Concerns
+
+Typical separation:
+
+- CI/CD prepares and signs  
+- publisher system validates and stages  
+- human approval gates publication  
+- commit phase performs publication  
+
+---
+
+## Key Concepts
+
+### Artifact
+
+An artifact is a versioned object associated with a release.
+
+Examples include:
+
+- SBOM (CycloneDX, SPDX)  
+- VEX documents  
+- binaries  
+- container references  
+
+Artifacts are typically:
+
+- signed  
+- timestamped  
+- logged in transparency systems  
+
+---
+
+### Collection
+
+A collection is an **authoritative statement about a release**.
+
+It aggregates:
+
+- artifact references (by digest)  
+- metadata  
+- optional compliance references  
+
+Consumers typically validate collections to understand the release.
+
+---
+
+### CLE (Common Lifecycle Enumeration)
+
+CLE expresses lifecycle information such as:
+
+- active  
+- deprecated  
+- end-of-life  
+- vulnerable / mitigated  
+
+CLE evolves over time and reflects operational reality rather than release creation.
+
+---
+
+### Compliance Documents
+
+Compliance may be represented through:
+
+- identifiers (e.g. ISO27001, SOC2)  
+- document references  
+- optionally as artifacts  
+
+---
+
+## Workflow Phases
+
+### 1. Preparation (CI/CD)
+
+Typical steps:
+
+- build artifacts  
+- generate SBOM  
+- optionally generate VEX  
+- compute digests  
+- prepare signing inputs  
+
+Example:
 
 ```text
-Create → Sign → Timestamp → (Transparency) → Bundle → Assemble → Commit → Publish
+build → sbom.json → vex.json → compute sha256
 ```
 
-### 2.3 Key separation
+---
 
-- **Preparation phase**: can run in CI/CD  
-- **Commit phase**: MUST be controlled and gated  
-- **Publication phase**: exposes data to consumers  
+### 2. Artifact Creation
+
+Artifacts are:
+
+- prepared (raw or canonicalized JSON)  
+- signed  
+- timestamped  
+- optionally logged  
+
+Example:
+
+```bash
+sign-objects.sh --mode jcs sbom.json
+```
 
 ---
 
-## 3. Core Principles
+### 3. Artifact Validation
 
-### 3.1 Immutability
+Publisher systems typically validate:
 
-Once an artifact has:
-
-- signature
-- timestamp
-- (optional) transparency log inclusion
-
-it becomes:
-
-> **immutable and reusable across collections**
+- signature integrity  
+- certificate validity  
+- timestamp plausibility  
+- transparency inclusion  
 
 ---
 
-### 3.2 Evidence as the trust unit
+### 4. Collection Assembly
 
-Trust is not derived from:
+Collections are constructed using:
 
-- the collection
-- the API
-- the transport
+- artifact digests  
+- release metadata  
+- optional compliance references  
 
-Trust is derived from:
+Example:
 
-> **evidence bundles bound to artifacts**
-
----
-
-### 3.3 Separation of concerns
-
-| Component | Responsibility |
-|----------|----------------|
-| Artifact | Content |
-| Evidence bundle | Trust |
-| Collection | Release statement |
-
----
-
-### 3.4 No key reuse
-
-> A key pair MUST NOT be reused.
-
-This is enforced at publication time.
+```json
+{
+  "artifacts": [
+    {
+      "type": "sbom",
+      "digest": "sha256:abc123..."
+    }
+  ]
+}
+```
 
 ---
 
-## 4. Artifact Lifecycle
+### 5. Collection Signing
 
-### 4.1 Creation
+The collection is:
 
-Artifacts MAY include:
-
-- binaries
-- SBOMs (CycloneDX, SPDX)
-- configuration files
-- metadata
-
-### 4.2 Identification
-
-Each artifact MUST have:
-
-- a stable identifier
-- a SHA-256 digest
-
-### 4.3 Storage
-
-Artifacts MUST be stored in a way that ensures:
-
-- immutability
-- content-addressable retrieval (recommended)
+- canonicalized  
+- signed  
+- timestamped  
+- optionally logged  
 
 ---
 
-### 4.4 Lifecycle (CLE) documents
+### 6. Approval
 
-Lifecycle (CLE) documents represent:
+A human approval step is commonly introduced to:
 
-- lifecycle state (e.g., active, deprecated)
-- planned lifecycle events (e.g., end-of-life)
-
-CLE documents:
-
-- are standalone TEA objects  
-- MUST be signed  
-- MUST include an embedded evidence bundle  
-- MUST NOT use external evidence bundles  
-
-#### Workflow rules
-
-CI/CD MAY:
-
-- generate or update CLE documents  
-- sign CLE documents  
-- create evidence bundles  
-- upload CLE documents to the Publisher API  
-
-CI/CD MUST NOT:
-
-- commit or publish CLE documents  
-
-CLE publication MUST:
-
-- require explicit human approval  
-- follow the same gated commit model as collections  
+- confirm release correctness  
+- validate compliance  
+- approve publication  
 
 ---
 
-## 5. Evidence Bundle Creation
+### 7. Commit
 
-### 5.1 Steps
+Commit represents the transition from staged data to published data.
 
-For each artifact:
+This may include:
 
-1. Generate a new key pair  
-2. Create a certificate (< 1 hour lifetime)  
-3. Sign the artifact using the private key (from the key pair associated with the certificate)  
-4. Generate timestamp(s)  
-5. Submit to a transparency log (Sigsum or Rekor)  
-6. Assemble evidence bundle  
-7. Upload artifact, signature, and certificate to the Publisher API  
-9. Publisher API verifies that the signature validates against the artifact using the uploaded certificate  
+- publishing collection versions  
+- publishing artifact versions  
+- publishing CLE updates  
+- updating DNS trust anchors  
 
 ---
 
-### 5.2 Evidence bundle contents
+## Artifact Lifecycle
+
+Artifacts are generally treated as immutable once published.
+
+However, new versions may be introduced.
+
+### Example: SBOM correction
+
+```text
+artifact: sbom.json
+  v1 → initial version
+  v2 → corrected version
+```
+
+A subsequent collection version may reference the corrected artifact.
+
+---
+
+## Collection Lifecycle
+
+Collections evolve over time for a given release.
+
+### Typical triggers
+
+- VEX updates  
+- corrected SBOM  
+- additional artifacts  
+- compliance updates  
+
+### Example
+
+```text
+productRelease: 1.2.3
+
+collection v1 → initial
+collection v2 → SBOM corrected
+collection v3 → VEX added
+```
+
+---
+
+## CLE Lifecycle
+
+CLE documents evolve independently of releases.
+
+### Example
+
+```text
+CLE v1 → active
+CLE v2 → vulnerable
+CLE v3 → mitigated
+```
+
+Each version reflects a new lifecycle state.
+
+---
+
+## Compliance Documents
+
+Compliance may be updated over time.
+
+### Example
+
+```text
+collection v1 → no compliance
+collection v2 → ISO27001 reference added
+```
+
+Or represented as artifact:
+
+```text
+artifact: iso27001-cert.pdf
+collection references artifact
+```
+
+---
+
+## Evidence and Validation
+
+Typical elements:
 
 - signature  
-- certificate (containing the public key)  
-- timestamp(s)  
-- transparency proof(s)  
+- timestamp  
+- transparency proof  
 
-> At least one transparency log inclusion proof (Sigsum or Rekor) MUST be present for TEA Trust Architecture compliance.
+Validation typically includes:
 
-The Publisher API MUST verify that the signature is valid for the artifact using the included certificate before accepting the evidence bundle.
-
----
-
-### 5.3 Canonicalization
-
-If the evidence bundle is JSON:
-
-- MUST use RFC 8785 canonical form for hashing  
+- signature verification  
+- certificate validation  
+- timestamp checks  
+- inclusion proof verification  
 
 ---
 
-### 5.4 Result
+## Commit and Publication
 
-The artifact + evidence bundle becomes:
+Commit is the point where data becomes visible to consumers.
 
-> **frozen in time and independently verifiable without reliance on the publisher**
+Publication results in:
 
----
+- new collection versions  
+- new artifact versions  
+- new CLE versions  
 
-## 6. Collection Assembly
-
-### 6.1 Inputs
-
-- artifact references  
-- artifact digests  
-- optional evidence bundle references  
-- release metadata  
-
-### 6.2 Rules
-
-- artifacts MUST be referenced by SHA-256 digest  
-- evidence bundles MAY be external  
-- external bundles MUST include SHA-256 digest  
+Previous versions remain accessible.
 
 ---
 
-### 6.3 Important constraint
+## Real-World Scenarios
 
-> Evidence reuse applies ONLY to artifacts.
+### Missing artifact
 
-Collection evidence is unique per collection.
-
----
-
-## 7. Commit Phase
-
-### 7.1 Purpose
-
-- finalize the release
-- enforce policy
-- prevent inconsistencies
+```text
+collection v1 → firmware only
+collection v2 → firmware + SBOM
+```
 
 ---
 
-### 7.2 Required checks
+### VEX update
 
-The system MUST:
-
-- verify artifact integrity  
-- verify evidence bundles  
-- enforce key uniqueness  
-- verify completeness  
-- verify CLE documents (if present)  
+```text
+collection v1 → no vulnerabilities
+collection v2 → VEX added
+```
 
 ---
 
-### 7.3 Human control
+### SBOM correction
 
-Commit SHOULD:
-
-- require explicit approval  
-- require MFA for production releases  
-
-This requirement also applies to:
-
-- CLE document publication  
+```text
+sbom v1 → incomplete
+sbom v2 → corrected
+collection v2 → references sbom v2
+```
 
 ---
 
-### 7.4 Output
+### Compliance update
 
-A committed release produces:
-
-- immutable collection
-- immutable artifact set
-- immutable evidence bundles
-
----
-
-## 8. Publication Phase
-
-### 8.1 Actions
-
-- publish artifacts  
-- publish evidence bundles  
-- publish collection  
-- publish CLE documents (if present)  
-- update discovery (if needed)  
+```text
+collection v1 → no compliance
+collection v2 → ISO27001 reference
+```
 
 ---
 
-### 8.2 Delivery formats
+### Lifecycle change
 
-Artifact retrieval MAY return:
-
-1. Artifact only  
-2. Artifact + detached signature (multipart)  
-3. Artifact + evidence bundle (multipart)  
-
----
-
-## 9–17 unchanged (as previously provided)
+```text
+CLE v1 → active
+CLE v2 → end-of-life
+```
 
 ---
 
-## Final Statement
+## Summary
 
-The TEA Publisher Workflow ensures that:
+This workflow describes a model where:
 
-> **Artifacts and lifecycle statements are cryptographically bound, time-stamped, and verifiable before they are published.**
+- release identities remain stable  
+- collections, artifacts, CLE, and compliance evolve over time  
+- updates are expressed as new versions  
+- publication is controlled and auditable  
 
-This guarantees:
-
-- reproducibility  
-- auditability  
-- long-term trust  
-
-and enables TEA to function as a **secure-by-design publication system**.
+The publisher OpenAPI specification will formalize these concepts into a normative interface.
