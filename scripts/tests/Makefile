@@ -62,7 +62,9 @@ TESTS := \
 	$(TEST_DIR)/14-consumer-metadata-mismatch-fails.sh \
 	$(TEST_DIR)/15-consumer-missing-timestamp-fails.sh \
 	$(TEST_DIR)/16-consumer-evidence-manifest-mismatch-fails.sh \
-	$(TEST_DIR)/17-consumer-verify-time-outside-cert-fails.sh
+	$(TEST_DIR)/17-consumer-verify-time-outside-cert-fails.sh \
+	$(TEST_DIR)/18-consumer-tampered-metadata-fails.sh \
+	$(TEST_DIR)/19-signing-tsa-unreachable-fails.sh
 
 .PHONY: all test clean prepare-fixtures prepare-certs check-script
 
